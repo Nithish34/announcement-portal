@@ -2,9 +2,14 @@
 
 import { motion } from 'framer-motion';
 import { UserX, MessageSquare, Briefcase, Github } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 import DynamicBackground from '@/components/DynamicBackground';
+import { useRouter } from 'next/navigation';
 
 export default function BetterLuck2() {
+    const { user } = useAuth();
+    const router = useRouter();
+
     return (
         <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-8">
             <DynamicBackground />
@@ -36,7 +41,7 @@ export default function BetterLuck2() {
                         Thank you for giving it your all during Evaluation Phase 2. The individual metrics were incredibly competitive this year. While you won't be advancing to the ultimate Ghost Protocol stage, the skills you've demonstrated are highly commendable.
                     </p>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
                         <motion.div
                             whileHover={{ scale: 1.05 }}
                             className="bg-white/5 border border-white/10 hover:border-[#53389e]/50 hover:bg-[#53389e]/10 transition-all p-5 rounded-xl flex items-center gap-4 shadow-sm"
@@ -63,6 +68,29 @@ export default function BetterLuck2() {
                             </div>
                         </motion.div>
                     </div>
+
+                    {/* Watch Message CTA */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.6 }}
+                        className="mb-8"
+                    >
+                        <p className="text-gray-400 text-sm tracking-wider mb-4">
+                            We have a special message for you from the EduSpine team.
+                        </p>
+                        <motion.button
+                            onClick={() => router.push('/better-luck-2/video')}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.97 }}
+                            className="inline-flex items-center gap-3 bg-gradient-to-r from-[#53389e] to-[#7c3aed] text-white font-black tracking-widest uppercase px-10 py-4 rounded-full shadow-[0_0_30px_rgba(83,56,158,0.5)] hover:shadow-[0_0_50px_rgba(83,56,158,0.8)] transition-all duration-300 text-base border border-[#53389e]/60"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z" />
+                            </svg>
+                            Watch Our Message
+                        </motion.button>
+                    </motion.div>
 
                     <motion.div
                         initial={{ opacity: 0 }}

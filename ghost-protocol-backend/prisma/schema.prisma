@@ -1,0 +1,52 @@
+// Prisma Schema for Ghost Protocol Backend
+// Prisma v7+: connection URL is in prisma.config.ts — NOT in the datasource block.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // No `url` here in Prisma v7 — see prisma.config.ts
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// User — individual participant or admin
+// ─────────────────────────────────────────────────────────────────────────────
+model User {
+  id        String   @id @default(cuid())
+  teamId    String
+  email     String   @unique
+  password  String
+  role      Role     @default(PARTICIPANT)
+  result    Result?
+  createdAt DateTime @default(now())
+
+  team      Team     @relation(fields: [teamId], references: [id])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Team — hackathon team
+// ─────────────────────────────────────────────────────────────────────────────
+model Team {
+  id         String   @id @default(cuid())
+  name       String   @unique
+  members    User[]
+  repoUrl    String?
+  phase1Pass Boolean  @default(false)
+  phase2Pass Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────────────────────
+enum Role {
+  PARTICIPANT
+  ADMIN
+}
+
+enum Result {
+  WINNER
+  LOSER
+}

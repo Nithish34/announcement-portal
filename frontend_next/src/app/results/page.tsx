@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Users, Lock, Unlock, MonitorCheck } from 'lucide-react';
-import RewardTransition from '@/components/RewardTransition';
+import TransitionLoader from '@/components/TransitionLoader';
 import LoserRewardTransition from '@/components/LoserRewardTransition';
 import DynamicBackground from '@/components/DynamicBackground';
 
@@ -128,7 +128,17 @@ export default function Results() {
 
   const handleNext = () => {
     if (!isUnlocked) return;
+
     setShowTransition(true);
+
+    if (isWinnerRef.current) {
+      // Use TransitionLoader which naturally triggers the route via setTimeout here
+      setTimeout(() => {
+        router.push('/eval-2');
+      }, 1500);
+    }
+    // If loser, the React tree below will mount LoserRewardTransition.
+    // That component internally takes care of navigating via onComplete callback.
   };
 
   return (
@@ -377,8 +387,9 @@ export default function Results() {
       </div>
 
       {showTransition && isWinnerRef.current && (
-        <RewardTransition onComplete={() => router.push('/eval-2')} />
+        <TransitionLoader isVisible={true} />
       )}
+
       {showTransition && !isWinnerRef.current && (
         <LoserRewardTransition onComplete={() => router.push('/better-luck')} />
       )}

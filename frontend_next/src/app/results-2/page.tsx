@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, User, Lock, Unlock } from 'lucide-react';
-import RewardTransition from '@/components/RewardTransition';
+import TransitionLoader from '@/components/TransitionLoader';
 import LoserRewardTransition from '@/components/LoserRewardTransition';
 import DynamicBackground from '@/components/DynamicBackground';
 
@@ -113,7 +113,15 @@ export default function Results2() {
 
     const handleNext = () => {
         if (!isUnlocked) return;
+
         setShowTransition(true);
+
+        if (isWinnerRef.current) {
+            setTimeout(() => {
+                router.push('/eval-3');
+            }, 1500); // Wait for loader animation
+        }
+        // If not winner, the LoserRewardTransition handles its own navigation callback
     };
 
     return (
@@ -341,8 +349,9 @@ export default function Results2() {
 
             {/* The Transition Overlay */}
             {showTransition && isWinnerRef.current && (
-                <RewardTransition onComplete={() => router.push('/eval-3')} />
+                <TransitionLoader isVisible={true} />
             )}
+
             {showTransition && !isWinnerRef.current && (
                 <LoserRewardTransition onComplete={() => router.push('/better-luck-2')} />
             )}

@@ -1,0 +1,12 @@
+﻿src/controllers/teams.controller.ts(31,22): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/controllers/teams.controller.ts(55,22): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/controllers/teams.controller.ts(71,22): error TS2322: Type 'string | string[]' is not assignable to type 'string | StringFilter<"User"> | undefined'.
+  Type 'string[]' is not assignable to type 'string | StringFilter<"User"> | undefined'.
+src/controllers/users.controller.ts(51,22): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/controllers/users.controller.ts(79,22): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/controllers/users.controller.ts(103,22): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.

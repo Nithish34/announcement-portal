@@ -6,14 +6,19 @@ import { motion } from 'framer-motion';
 import { Clock, Lock } from 'lucide-react';
 import DynamicBackground from '@/components/DynamicBackground';
 import MovingBanner from '@/components/MovingBanner';
+import TransitionLoader from '@/components/TransitionLoader';
 
 export default function Timer() {
   const [seconds, setSeconds] = useState<number>(10);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    if (seconds === 0) {
-      router.push('/results');
+    router.prefetch('/results');
+
+    if (seconds <= 0) {
+      setIsRedirecting(true);
+      router.replace('/results');
       return;
     }
 
@@ -142,6 +147,8 @@ export default function Timer() {
           </div>
         </div>
       </motion.div>
+
+      <TransitionLoader isVisible={isRedirecting} />
     </div>
   );
 }

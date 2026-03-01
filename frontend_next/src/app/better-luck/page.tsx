@@ -4,9 +4,11 @@ import { motion } from 'framer-motion';
 import { Heart, Lightbulb, Users, Award } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import DynamicBackground from '@/components/DynamicBackground';
+import { useRouter } from 'next/navigation';
 
 export default function BetterLuck() {
   const { user } = useAuth();
+  const router = useRouter();
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -58,17 +60,25 @@ export default function BetterLuck() {
               A Message From Our Team
             </h2>
 
-            <div className="aspect-video bg-[#000000]/80 rounded-xl border border-[#53389e]/40 flex items-center justify-center mb-8 relative overflow-hidden shadow-inner">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="w-16 h-16 border-4 border-[#53389e]/30 border-t-[#53389e] rounded-full animate-spin mb-4 mx-auto drop-shadow-[0_0_10px_rgba(83,56,158,0.5)]"></div>
-                  <p className="text-[#53389e] text-sm font-bold tracking-wider uppercase">Video Player Placeholder</p>
-                  <p className="text-gray-500 text-xs mt-2 tracking-widest uppercase">16:9 HTML5 Video Will Be Displayed Here</p>
-                </div>
-              </div>
+            <p className="text-gray-300 text-center text-base mb-8 leading-relaxed max-w-xl mx-auto">
+              We have a heartfelt message for you from the EduSpine team. Click below to watch it.
+            </p>
+
+            <div className="flex justify-center">
+              <motion.button
+                onClick={() => router.push('/better-luck/video')}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.97 }}
+                className="inline-flex items-center gap-3 bg-gradient-to-r from-[#53389e] to-[#7c3aed] text-white font-black tracking-widest uppercase px-10 py-4 rounded-full shadow-[0_0_30px_rgba(83,56,158,0.5)] hover:shadow-[0_0_50px_rgba(83,56,158,0.8)] transition-all duration-300 text-base border border-[#53389e]/60"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+                Watch Our Message
+              </motion.button>
             </div>
 
-            <p className="text-[#53389e] text-center text-lg italic font-medium tracking-wide">
+            <p className="text-[#53389e] text-center text-lg italic font-medium tracking-wide mt-8">
               "Every experience is a stepping stone to success. Keep building, keep learning."
             </p>
           </motion.div>
@@ -102,17 +112,6 @@ export default function BetterLuck() {
                 Watch for announcements about our next hackathon
               </p>
             </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1 }}
-            className="text-center"
-          >
-            <p className="text-[#53389e] text-sm font-bold tracking-[0.2em] uppercase">
-              You will receive a participation certificate via email within 48 hours
-            </p>
           </motion.div>
         </motion.div>
       </div>
