@@ -39,6 +39,16 @@ model Team {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SystemConfig — key/value store for runtime feature flags & workflow state
+// Replaces the Redis `workflow_state` key — no ioredis needed.
+// ─────────────────────────────────────────────────────────────────────────────
+model SystemConfig {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Enums
 // ─────────────────────────────────────────────────────────────────────────────
 enum Role {

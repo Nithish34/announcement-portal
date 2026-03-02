@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../services/prisma.service';
 import { getIo } from '../socket';
 import { addGhostProtocolJob } from '../queues/ghost.queue';
-import { getRedisClient } from '../services/redis.service';
+
 
 // GET /api/admin/dashboard
 export async function getDashboard(_req: Request, res: Response): Promise<void> {
@@ -120,16 +120,15 @@ export async function resetPortal(_req: Request, res: Response): Promise<void> {
 }
 
 // GET /api/admin/workflow
-// Returns the current feature flags / system state stored in Redis
+// Returns the current feature flags / workflow state stored in PostgreSQL (SystemConfig)
 export async function getWorkflowState(_req: Request, res: Response): Promise<void> {
     try {
-        const client = getRedisClient();
-        const rawState = await client.get('workflow_state');
-        const state = rawState ? JSON.parse(rawState) : { registrationOpen: false, currentPhase: 0 };
+        const row = await prisma.systemConfig.findUnique({ where: { key: 'workflow_state' } });
+        const state = row ? JSON.parse(row.value) : { registrationOpen: false, currentPhase: 0 };
         res.json(state);
     } catch (err) {
-        console.error('Redis error reading workflow state:', err);
-        res.status(500).json({ error: 'Failed to read workflow state. Is Redis running?' });
+        console.error('DB error reading workflow state:', err);
+        res.status(500).json({ error: 'Failed to read workflow state' });
     }
 }
 
@@ -137,17 +136,20 @@ export async function getWorkflowState(_req: Request, res: Response): Promise<vo
 // Body: { registrationOpen?: boolean, currentPhase?: number }
 export async function toggleWorkflowState(req: Request, res: Response): Promise<void> {
     try {
-        const client = getRedisClient();
-        const rawState = await client.get('workflow_state');
-        const currentState = rawState ? JSON.parse(rawState) : { registrationOpen: false, currentPhase: 0 };
+        const row = await prisma.systemConfig.findUnique({ where: { key: 'workflow_state' } });
+        const currentState = row ? JSON.parse(row.value) : { registrationOpen: false, currentPhase: 0 };
 
         const newState = { ...currentState, ...req.body };
-        await client.set('workflow_state', JSON.stringify(newState));
+        await prisma.systemConfig.upsert({
+            where: { key: 'workflow_state' },
+            update: { value: JSON.stringify(newState) },
+            create: { key: 'workflow_state', value: JSON.stringify(newState) },
+        });
 
         getIo().emit('workflow:updated', { state: newState, timestamp: new Date().toISOString() });
         res.json({ message: 'Workflow state updated', state: newState });
     } catch (err) {
-        console.error('Redis error updating workflow state:', err);
-        res.status(500).json({ error: 'Failed to update workflow state. Is Redis running?' });
+        console.error('DB error updating workflow state:', err);
+        res.status(500).json({ error: 'Failed to update workflow state' });
     }
 }

@@ -1,5 +1,5 @@
 import { Queue, Worker } from 'bullmq';
-import { redisConnectionOptions } from '../services/redis.service';
+import { bullConnection } from './connection';
 import { prisma } from '../services/prisma.service';
 import { getIo } from '../socket';
 
@@ -11,21 +11,22 @@ export interface GhostProtocolJobData {
 const QUEUE_NAME = 'ghost-protocol';
 
 // ── Queue ────────────────────────────────────────────────────────────────────
-const ghostQueue = new Queue<GhostProtocolJobData>(QUEUE_NAME, {
-    connection: redisConnectionOptions,
-});
-
-export async function addGhostProtocolJob(data: GhostProtocolJobData) {
-    return ghostQueue.add('team-reassign', data, {
+export const ghostQueue = new Queue<GhostProtocolJobData>(QUEUE_NAME, {
+    ...bullConnection,
+    defaultJobOptions: {
         attempts: 3,
         backoff: { type: 'exponential', delay: 3000 },
         removeOnComplete: 100,
         removeOnFail: 50,
-    });
+    },
+});
+
+export async function addGhostProtocolJob(data: GhostProtocolJobData) {
+    return ghostQueue.add('team-reassign', data);
 }
 
 // ── Worker ───────────────────────────────────────────────────────────────────
-const ghostWorker = new Worker<GhostProtocolJobData>(
+new Worker<GhostProtocolJobData>(
     QUEUE_NAME,
     async (job) => {
         const { userId, newTeamId } = job.data;
@@ -61,15 +62,7 @@ const ghostWorker = new Worker<GhostProtocolJobData>(
         console.log(`[Ghost Queue] User ${updatedUser.email} reassigned to team "${targetTeam.name}"`);
         return updatedUser;
     },
-    { connection: redisConnectionOptions }
-);
-
-ghostWorker.on('completed', (job) => {
-    console.log(`[Ghost Queue] Job ${job.id} completed`);
-});
-
-ghostWorker.on('failed', (job, err) => {
-    console.error(`[Ghost Queue] Job ${job?.id} failed:`, err.message);
-});
-
-export { ghostQueue };
+    { ...bullConnection }
+)
+    .on('completed', (job) => console.log(`[Ghost Queue] Job ${job.id} completed`))
+    .on('failed', (job, err) => console.error(`[Ghost Queue] Job ${job?.id} failed:`, err.message));
