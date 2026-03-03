@@ -8,36 +8,23 @@ import { Trophy, Users, Lock, Unlock, MonitorCheck } from 'lucide-react';
 import TransitionLoader from '@/components/TransitionLoader';
 import LoserRewardTransition from '@/components/LoserRewardTransition';
 import DynamicBackground from '@/components/DynamicBackground';
+import { getPhase1Results } from '@/lib/api';
+import { socket } from '@/lib/socket';
 
-const MAX_SLOTS = 20;
-
-const mockTeams = [
-  { id: 'TEAM-001', name: 'Code Warriors', members: 4 },
-  { id: 'TEAM-002', name: 'Hack Masters', members: 4 },
-  { id: 'TEAM-003', name: 'Dev Ninjas', members: 5 },
-  { id: 'TEAM-004', name: 'Binary Beasts', members: 4 },
-  { id: 'TEAM-005', name: 'Pixel Pirates', members: 3 }, // Total: 20 members (Exactly filled)
-  { id: 'TEAM-006', name: 'Logic Lords', members: 4 },   // Exceeds 20, will be eliminated
-  { id: 'TEAM-007', name: 'Byte Me', members: 5 }        // Exceeds 20, will be eliminated
-];
-
-// Dynamically calculate winners based on the slot limit
-const evaluatedTeams = (() => {
-  let currentMembers = 0;
-  return mockTeams.map(team => {
-    const isWinner = currentMembers + team.members <= MAX_SLOTS;
-    if (isWinner) {
-      currentMembers += team.members;
-    }
-    return { ...team, isWinner };
-  });
-})();
+interface TeamData {
+  id: string;
+  name: string;
+  memberCount: number;
+  result: 'WINNER' | 'LOSER';
+}
 
 export default function Results() {
+  const [teams, setTeams] = useState<TeamData[]>([]);
+  const [maxSlots, setMaxSlots] = useState(20);
   const [showShutter, setShowShutter] = useState(true);
   const [showContent, setShowContent] = useState(false);
-  const [visibleTeams, setVisibleTeams] = useState<typeof evaluatedTeams>([]);
-  const [currentWinner, setCurrentWinner] = useState<typeof evaluatedTeams[0] | null>(null);
+  const [visibleTeams, setVisibleTeams] = useState<TeamData[]>([]);
+  const [currentWinner, setCurrentWinner] = useState<TeamData | null>(null);
   const [currentFilledSlots, setCurrentFilledSlots] = useState(0);
   const [announcedWinnerIds, setAnnouncedWinnerIds] = useState<string[]>([]);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
@@ -46,18 +33,23 @@ export default function Results() {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [evaluationComplete, setEvaluationComplete] = useState(false);
 
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
 
-  // Use logged in user's teamId or default to TEAM-003 for testing
-  const userTeam = evaluatedTeams.find(t => t.id === (user?.teamId || 'TEAM-003'));
+  // Use logged in user's teamId or default to empty string if not found yet
+  const userTeam = teams.find(t => t.id === (user?.teamId || ''));
 
-  const isUserWinner = userTeam?.isWinner ?? false;
+  const isUserWinner = userTeam?.result === 'WINNER';
   const isWinnerRef = useRef(isUserWinner);
+  // Ref to stable-capture userTeam inside the async sequence
+  // (so effect dep array doesn't include it and abort the sequence)
+  const userTeamRef = useRef(userTeam);
+  const hasRunSequence = useRef(false);
 
   useEffect(() => {
     isWinnerRef.current = isUserWinner;
-  }, [isUserWinner]);
+    userTeamRef.current = userTeam;
+  }, [isUserWinner, userTeam]);
 
   useEffect(() => {
     if (timeLeft === null || timeLeft <= 0) return;
@@ -68,7 +60,56 @@ export default function Results() {
   }, [timeLeft]);
 
   useEffect(() => {
+    const loadResults = async () => {
+      try {
+        const data: TeamData[] = await getPhase1Results();
+        if (Array.isArray(data)) {
+          setTeams(data);
+          // dynamically get max_slots from the first winner count
+          // The backend returns computed result — count winners
+        }
+      } catch (err) {
+        console.error('Failed to load phase 1 results', err);
+      }
+    };
+
+    // Fetch max_slots for display (non-authenticated, use public endpoint)
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/config/timers`)
+      .then(r => r.json())
+      .then(data => { if (data.announcement_interval) return; }) // just ping
+      .catch(() => null);
+
+    loadResults();
+
+    socket.connect();
+
+    socket.on('phase1:results', (data) => {
+      if (Array.isArray(data)) setTeams(data);
+    });
+
+    socket.on('config:updated', ({ key, value }: { key: string; value: string }) => {
+      if (key === 'max_slots') setMaxSlots(Number(value));
+    });
+
+    socket.on('system:phase-change', (data) => {
+      console.log('Phase changed to:', data.phase);
+    });
+
+    return () => {
+      socket.off('phase1:results');
+      socket.off('config:updated');
+      socket.off('system:phase-change');
+      socket.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
     let unmounted = false;
+
+    // Wait until auth is resolved — prevents sequence from starting with user=null
+    // and then being aborted when user is restored from sessionStorage
+    if (isLoading || teams.length === 0 || hasRunSequence.current) return;
+    hasRunSequence.current = true;
 
     const runSequence = async () => {
       // 1. Shutter Phase
@@ -77,12 +118,12 @@ export default function Results() {
       setShowShutter(false);
       setShowContent(true);
 
-      setVisibleTeams(evaluatedTeams);
+      setVisibleTeams(teams);
 
       await new Promise(r => setTimeout(r, 600));
       if (unmounted) return;
 
-      const winners = evaluatedTeams.filter(t => t.isWinner);
+      const winners = teams.filter(t => t.result === 'WINNER');
 
       for (let i = 0; i < winners.length; i++) {
         const winner = winners[i];
@@ -99,10 +140,11 @@ export default function Results() {
         if (unmounted) return;
 
         setCurrentWinner(null);
-        setCurrentFilledSlots(prev => prev + winner.members);
+        setCurrentFilledSlots(prev => prev + winner.memberCount);
         setAnnouncedWinnerIds(prev => [...prev, winner.id]);
 
-        if (userTeam?.id === winner.id) {
+        // Use ref — avoids stale closure and keeps dep array stable
+        if (userTeamRef.current?.id === winner.id) {
           setIsUnlocked(true);
         }
 
@@ -114,7 +156,8 @@ export default function Results() {
       setTimeLeft(null);
       setEvaluationComplete(true);
 
-      if (!isUserWinner) {
+      // Use ref — avoids re-firing effect when isUserWinner changes
+      if (!isWinnerRef.current) {
         setIsUnlocked(true);
       }
     };
@@ -123,8 +166,14 @@ export default function Results() {
 
     return () => {
       unmounted = true;
+      // Reset so React StrictMode's intentional double-invoke can re-run the sequence.
+      // In production (no StrictMode) this never has a chance to cause a double-run
+      // because there is no artificial teardown between the two runs.
+      hasRunSequence.current = false;
     };
-  }, [router, isUserWinner, userTeam?.id]);
+    // Only depend on teams and isLoading — user-derived values use refs above
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teams, isLoading]);
 
   const handleNext = () => {
     if (!isUnlocked) return;
@@ -224,7 +273,7 @@ export default function Results() {
                     <div className="text-[10px] text-gray-500 font-bold tracking-widest uppercase mb-1 flex items-center gap-2">
                       <Users className="w-3 h-3 text-[#a855f7]" /> Total Teams
                     </div>
-                    <div className="text-xl md:text-2xl font-black text-[#e2e8f0] font-mono tracking-widest">{mockTeams.length}</div>
+                    <div className="text-xl md:text-2xl font-black text-[#e2e8f0] font-mono tracking-widest">{teams.length}</div>
                   </div>
 
                   <div className="bg-[#0f0f13]/90 backdrop-blur border border-[#10b981]/20 rounded-xl p-3 md:p-4 shadow-[0_8px_30px_rgba(16,185,129,0.05)] flex flex-col items-start relative overflow-hidden">
@@ -286,7 +335,7 @@ export default function Results() {
                   <div className="bg-[#0f0f13]/90 backdrop-blur border border-[#53389e]/20 rounded-xl p-3 md:p-4 shadow-[0_8px_30px_rgba(83,56,158,0.05)] flex justify-between items-center relative overflow-hidden">
                     <div className="absolute right-0 top-0 bottom-0 w-1 bg-[#53389e] shadow-[0_0_15px_#53389e]" />
                     <div className="text-[10px] text-gray-500 font-bold tracking-widest uppercase">Slots Filled</div>
-                    <div className="text-xl md:text-2xl font-black text-[#53389e] font-mono tracking-wider">{currentFilledSlots} / {MAX_SLOTS}</div>
+                    <div className="text-xl md:text-2xl font-black text-[#53389e] font-mono tracking-wider">{currentFilledSlots} / {maxSlots}</div>
                   </div>
                 </div>
               </motion.div>
@@ -344,7 +393,7 @@ export default function Results() {
 
                         {/* Member Count Pill */}
                         <div className={`px-3 py-1.5 rounded-lg border text-[10px] font-mono font-black ${isAnnouncedWinner ? 'bg-[#ffd700]/10 border-[#ffd700]/30 text-[#ffd700]' : 'bg-black/40 border-white/5 text-gray-400'}`}>
-                          {team.members} MEM
+                          {team.memberCount} MEM
                         </div>
                       </motion.div>
                     );

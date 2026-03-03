@@ -9,11 +9,20 @@ import DynamicBackground from '@/components/DynamicBackground';
 import MovingBanner from '@/components/MovingBanner';
 
 export default function Timer2() {
-    const [seconds, setSeconds] = useState<number>(5);
+    const [seconds, setSeconds] = useState<number | null>(null);
     const router = useRouter();
     const [isRedirecting, setIsRedirecting] = useState(false);
 
+    // Fetch phase2 timer from SystemConfig on mount
     useEffect(() => {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/config/timers`)
+            .then(r => r.json())
+            .then(data => { setSeconds(Number(data.phase2_timer_seconds)); })
+            .catch(() => setSeconds(5)); // fallback
+    }, []);
+
+    useEffect(() => {
+        if (seconds === null) return;
         // Prefetch the route silently while the user waits to eliminate dev compile delay!
         router.prefetch('/results-2');
 
@@ -24,16 +33,17 @@ export default function Timer2() {
         }
 
         const timer = setInterval(() => {
-            setSeconds((prev) => prev - 1);
+            setSeconds((prev) => (prev !== null ? prev - 1 : 0));
         }, 1000);
 
         return () => clearInterval(timer);
     }, [seconds, router]);
 
-    const days = Math.floor(seconds / (3600 * 24));
-    const hours = Math.floor((seconds % (3600 * 24)) / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
+    const s = seconds ?? 0;
+    const days = Math.floor(s / (3600 * 24));
+    const hours = Math.floor((s % (3600 * 24)) / 3600);
+    const minutes = Math.floor((s % 3600) / 60);
+    const secs = s % 60;
 
     const formatTime = (num: number): string => String(num).padStart(2, '0');
 

@@ -11,6 +11,7 @@ import usersRoutes from './routes/users';
 import resultsRoutes from './routes/results';
 import adminRoutes from './routes/admin';
 import githubRoutes from './routes/github';
+import configRoutes from './routes/config';
 
 import { initSocket } from './socket';
 import { apiLimiter } from './middleware/rateLimiter';
@@ -24,7 +25,13 @@ const server = http.createServer(app);
 // Global Middleware
 // ──────────────────────────────────────────────
 app.use(helmet());
-app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:3000', credentials: true }));
+app.use(cors({
+    origin: [
+        process.env.CLIENT_URL || 'http://localhost:3000',
+        'http://localhost:3001',  // Admin dashboard
+    ],
+    credentials: true,
+}));
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -43,6 +50,7 @@ app.use('/api/users', usersRoutes);
 app.use('/api/results', resultsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/github', githubRoutes);
+app.use('/api/config', configRoutes);
 
 // Health check
 app.get('/health', (_req, res) => {

@@ -9,16 +9,18 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!user) {
+    // Don't redirect while restoring session from sessionStorage
+    if (!isLoading && !user) {
       router.push('/login');
     }
-  }, [user, router]);
+  }, [user, isLoading, router]);
 
-  if (!user) {
+  // Show nothing while loading session OR if no user (about to redirect)
+  if (isLoading || !user) {
     return null;
   }
 

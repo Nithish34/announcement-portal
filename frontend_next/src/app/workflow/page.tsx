@@ -10,7 +10,7 @@ export default function WorkflowControl() {
     const { setWorkflowState, user } = useAuth();
     const router = useRouter();
 
-    const handleSimulate = (teamId: string, result: 'winner' | 'loser', route: string) => {
+    const handleSimulate = (teamId: string, result: 'WINNER' | 'LOSER', route: string) => {
         setWorkflowState(teamId, result);
         router.push(route);
     };
@@ -50,7 +50,7 @@ export default function WorkflowControl() {
 
                         <div className="space-y-4">
                             <button
-                                onClick={() => handleSimulate('TEAM-001', 'winner', '/results')}
+                                onClick={() => handleSimulate('TEAM-001', 'WINNER', '/results')}
                                 className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-[#10b981]/10 border border-white/10 hover:border-[#10b981]/50 rounded-xl transition-all group"
                             >
                                 <div className="flex items-center gap-3">
@@ -61,7 +61,7 @@ export default function WorkflowControl() {
                             </button>
 
                             <button
-                                onClick={() => handleSimulate('TEAM-006', 'loser', '/results')}
+                                onClick={() => handleSimulate('TEAM-006', 'LOSER', '/results')}
                                 className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/50 rounded-xl transition-all group"
                             >
                                 <div className="flex items-center gap-3">
@@ -81,7 +81,7 @@ export default function WorkflowControl() {
 
                         <div className="space-y-4">
                             <button
-                                onClick={() => handleSimulate('USR-101', 'winner', '/results-2')}
+                                onClick={() => handleSimulate('USR-101', 'WINNER', '/results-2')}
                                 className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-[#10b981]/10 border border-white/10 hover:border-[#10b981]/50 rounded-xl transition-all group"
                             >
                                 <div className="flex items-center gap-3">
@@ -92,7 +92,7 @@ export default function WorkflowControl() {
                             </button>
 
                             <button
-                                onClick={() => handleSimulate('USR-105', 'loser', '/results-2')}
+                                onClick={() => handleSimulate('USR-105', 'LOSER', '/results-2')}
                                 className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/50 rounded-xl transition-all group"
                             >
                                 <div className="flex items-center gap-3">

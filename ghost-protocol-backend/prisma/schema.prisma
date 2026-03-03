@@ -29,13 +29,14 @@ model User {
 // Team — hackathon team
 // ─────────────────────────────────────────────────────────────────────────────
 model Team {
-  id         String   @id @default(cuid())
-  name       String   @unique
-  members    User[]
-  repoUrl    String?
-  phase1Pass Boolean  @default(false)
-  phase2Pass Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  id             String   @id @default(cuid())
+  name           String   @unique
+  members        User[]
+  repoUrl        String?
+  phase1Pass     Boolean  @default(false)
+  phase2Pass     Boolean  @default(false)
+  resultOverride Result?  // manually forced winner/loser, overrides slot logic
+  createdAt      DateTime @default(now())
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

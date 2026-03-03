@@ -8,23 +8,24 @@ import { Trophy, User, Lock, Unlock } from 'lucide-react';
 import TransitionLoader from '@/components/TransitionLoader';
 import LoserRewardTransition from '@/components/LoserRewardTransition';
 import DynamicBackground from '@/components/DynamicBackground';
+import { getPhase2Results } from '@/lib/api';
+import { socket } from '@/lib/socket';
 
-const mockIndividuals = [
-    { id: 'USR-101', name: 'Alice Smith', role: 'Frontend Dev', score: 98 },
-    { id: 'USR-102', name: 'Bob Jones', role: 'Backend Dev', score: 95 },
-    { id: 'USR-103', name: 'Charlie Day', role: 'Fullstack Dev', score: 92 },
-    { id: 'USR-104', name: 'Diana Prince', role: 'UI/UX Designer', score: 96 },
-    { id: 'USR-105', name: 'Eve Adams', role: 'Data Scientist', score: 89 },
-    { id: 'USR-106', name: 'Frank Lee', role: 'DevOps Engineer', score: 94 },
-    { id: 'USR-107', name: 'Grace Hopper', role: 'Systems Architect', score: 99 },
-];
+interface IndividualData {
+    id: string;
+    email: string;
+    role: string;
+    result: 'WINNER' | 'LOSER' | null;
+    team: { name: string };
+}
 
 export default function Results2() {
+    const [individuals, setIndividuals] = useState<IndividualData[]>([]);
     const [showShutter, setShowShutter] = useState(true);
     const [showContent, setShowContent] = useState(false);
 
-    const [visibleIndividuals, setVisibleIndividuals] = useState(mockIndividuals);
-    const [currentWinner, setCurrentWinner] = useState<typeof mockIndividuals[0] | null>(null);
+    const [visibleIndividuals, setVisibleIndividuals] = useState<IndividualData[]>([]);
+    const [currentWinner, setCurrentWinner] = useState<IndividualData | null>(null);
     const [slottedCount, setSlottedCount] = useState(0);
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
@@ -32,18 +33,23 @@ export default function Results2() {
     const [evaluationComplete, setEvaluationComplete] = useState(false);
     const [showTransition, setShowTransition] = useState(false);
 
-    const { user } = useAuth();
+    const { user, isLoading } = useAuth();
     const router = useRouter();
 
-    // Use the connected user's ID or default to USR-101
-    const userIndividualId = user?.teamId || 'USR-101';
-    const userIndividual = mockIndividuals.find(ind => ind.id === userIndividualId) || mockIndividuals[0];
-    const isUserTopPerformer = userIndividual.score >= 95;
+    const userIndividualId = user?.id || '';
+    const userIndividual = individuals.find(ind => ind.id === userIndividualId);
+    const isUserTopPerformer = userIndividual?.result === 'WINNER';
 
     const isWinnerRef = useRef(isUserTopPerformer);
+    // Track userIndividualId via ref so the async sequence reads the correct
+    // value even when dep array doesn't include it
+    const userIdRef = useRef(userIndividualId);
+    const hasRunSequence = useRef(false);
+
     useEffect(() => {
         isWinnerRef.current = isUserTopPerformer;
-    }, [isUserTopPerformer]);
+        userIdRef.current = userIndividualId;
+    }, [isUserTopPerformer, userIndividualId]);
 
     useEffect(() => {
         if (timeLeft === null || timeLeft <= 0) return;
@@ -54,7 +60,45 @@ export default function Results2() {
     }, [timeLeft]);
 
     useEffect(() => {
+        const loadResults = async () => {
+            try {
+                const data: IndividualData[] = await getPhase2Results();
+                if (Array.isArray(data)) {
+                    setIndividuals(data);
+                    setVisibleIndividuals(data);
+                }
+            } catch (err) {
+                console.error('Failed to load phase 2 results', err);
+            }
+        };
+        loadResults();
+
+        socket.connect();
+
+        socket.on('phase2:results', (data) => {
+            if (Array.isArray(data)) {
+                setIndividuals(data);
+                setVisibleIndividuals(data);
+            }
+        });
+
+        socket.on('system:phase-change', (data) => {
+            console.log('Phase changed to:', data.phase);
+        });
+
+        return () => {
+            socket.off('phase2:results');
+            socket.off('system:phase-change');
+            socket.disconnect();
+        };
+    }, []);
+
+    useEffect(() => {
         let unmounted = false;
+
+        // Wait until auth session is fully restored before starting
+        if (isLoading || individuals.length === 0 || hasRunSequence.current) return;
+        hasRunSequence.current = true;
 
         const runSequence = async () => {
             // 1. Shutter Phase
@@ -66,7 +110,7 @@ export default function Results2() {
             await new Promise(r => setTimeout(r, 600));
             if (unmounted) return;
 
-            const winners = mockIndividuals.filter(ind => ind.score >= 95);
+            const winners = individuals.filter(ind => ind.result === 'WINNER');
 
             for (let i = 0; i < winners.length; i++) {
                 const winner = winners[i];
@@ -84,9 +128,9 @@ export default function Results2() {
 
                 setCurrentWinner(null);
                 setSlottedCount(prev => prev + 1);
-                // Do not remove the individual from the list so losers can still see them
 
-                if (userIndividualId === winner.id) {
+                // Use ref — correct user id even with empty dep array
+                if (userIdRef.current === winner.id) {
                     setIsUnlocked(true);
                 }
 
@@ -96,10 +140,10 @@ export default function Results2() {
             }
 
             setTimeLeft(null);
-
             setEvaluationComplete(true);
 
-            if (!isUserTopPerformer) {
+            // Use ref — correct winner status
+            if (!isWinnerRef.current) {
                 setIsUnlocked(true);
             }
         };
@@ -108,8 +152,12 @@ export default function Results2() {
 
         return () => {
             unmounted = true;
+            // Reset for React StrictMode double-invoke
+            hasRunSequence.current = false;
         };
-    }, []);
+        // Only depend on individuals and isLoading — user values use refs above
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [individuals, isLoading]);
 
     const handleNext = () => {
         if (!isUnlocked) return;
@@ -161,7 +209,7 @@ export default function Results2() {
                         <div className="bg-gradient-to-br from-[#111] to-[#000] border-4 border-[#ffd700] rounded-3xl p-8 lg:p-12 text-center shadow-[0_0_100px_rgba(255,215,0,0.6)] max-w-2xl w-[80%] mx-auto">
                             <Trophy className="w-20 h-20 md:w-32 md:h-32 text-[#ffd700] mx-auto mb-6 drop-shadow-[0_0_20px_rgba(255,215,0,1)]" />
                             <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#ffd700] to-white drop-shadow-xl mb-2 uppercase tracking-wider">
-                                {currentWinner.name}
+                                {currentWinner.email}
                             </h2>
                             <p className="text-[#ffd700] text-lg md:text-2xl font-mono tracking-[0.5em] uppercase font-bold mb-4">{currentWinner.role}</p>
                             <p className="text-white text-base md:text-xl font-mono uppercase bg-[#ffd700]/20 inline-block px-4 py-1.5 rounded-full border border-[#ffd700]">Slot Secured</p>
@@ -270,7 +318,7 @@ export default function Results2() {
                                                 <div className="flex items-start justify-between mb-2 mt-6">
                                                     <div className="min-w-0 pr-2">
                                                         <h3 className={`text-base font-black tracking-wide truncate ${isUserCard ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#53389e] to-white drop-shadow-sm' : 'text-white'}`}>
-                                                            {person.name}
+                                                            {person.email}
                                                         </h3>
                                                         <div className="flex flex-col gap-1 mt-1 border-l-2 border-[#53389e] pl-2">
                                                             <p className="text-gray-400 text-[10px] font-mono tracking-widest">{person.id}</p>
@@ -285,9 +333,9 @@ export default function Results2() {
                                                 </div>
 
                                                 <div className="flex flex-col gap-1 items-start bg-black/40 rounded-lg p-2 mt-2 border border-white/5">
-                                                    <span className="text-gray-400 text-[10px] font-semibold tracking-wider">EVAL SCORE:</span>
-                                                    <span className={`font-mono font-black text-lg ${isUserCard ? 'text-[#53389e] drop-shadow-[0_0_5px_rgba(83,56,158,0.5)]' : 'text-white'}`}>
-                                                        {person.score}<span className="text-xs text-gray-500">/100</span>
+                                                    <span className="text-gray-400 text-[10px] font-semibold tracking-wider">RESULT STATUS:</span>
+                                                    <span className={`font-mono font-black text-lg ${isUserCard ? 'text-[#53389e] drop-shadow-[0_0_5px_rgba(83,56,158,0.5)]' : person.result === 'WINNER' ? 'text-[#ffd700]' : 'text-white'}`}>
+                                                        {person.result ?? 'PENDING'}
                                                     </span>
                                                 </div>
                                             </motion.div>

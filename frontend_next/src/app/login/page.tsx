@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, FormEvent } from 'react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { motion } from 'framer-motion';
@@ -11,14 +12,29 @@ import MovingBanner from '@/components/MovingBanner';
 export default function Login() {
   const [teamId, setTeamId] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (teamId && password) {
-      login(teamId, password);
-      router.push('/timer');
+    if (!teamId || !password) return;
+
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const success = await login(teamId, password);
+      if (success) {
+        router.push('/timer');
+      } else {
+        setError('Invalid Team ID or password. Please try again.');
+      }
+    } catch {
+      setError('Unable to reach the server. Please check your connection.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -58,7 +74,8 @@ export default function Login() {
                   type="text"
                   value={teamId}
                   onChange={(e) => setTeamId(e.target.value)}
-                  className="w-full bg-[#000000]/70 border border-[#53389e]/30 rounded-xl px-10 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#53389e] focus:ring-1 focus:ring-[#53389e] transition-all shadow-inner"
+                  disabled={isLoading}
+                  className="w-full bg-[#000000]/70 border border-[#53389e]/30 rounded-xl px-10 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#53389e] focus:ring-1 focus:ring-[#53389e] transition-all shadow-inner disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="Enter Team ID"
                   required
                 />
@@ -75,20 +92,39 @@ export default function Login() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-[#000000]/70 border border-[#53389e]/30 rounded-xl px-10 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#53389e] focus:ring-1 focus:ring-[#53389e] transition-all shadow-inner"
+                  disabled={isLoading}
+                  className="w-full bg-[#000000]/70 border border-[#53389e]/30 rounded-xl px-10 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#53389e] focus:ring-1 focus:ring-[#53389e] transition-all shadow-inner disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="Enter Password"
                   required
                 />
               </div>
             </div>
 
+            {/* Error Banner */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/40 text-red-400 text-sm font-semibold tracking-wide"
+              >
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                {error}
+              </motion.div>
+            )}
+
             <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={isLoading ? {} : { scale: 1.02 }}
+              whileTap={isLoading ? {} : { scale: 0.98 }}
               type="submit"
-              className="w-full mt-8 bg-gradient-to-r from-[#53389e] to-[#6b47c9] text-white font-black tracking-widest py-4 rounded-xl hover:from-[#6b47c9] hover:to-[#53389e] transition-all duration-300 shadow-[0_0_20px_rgba(83,56,158,0.4)]"
+              disabled={isLoading}
+              className="w-full mt-8 bg-gradient-to-r from-[#53389e] to-[#6b47c9] text-white font-black tracking-widest py-4 rounded-xl hover:from-[#6b47c9] hover:to-[#53389e] transition-all duration-300 shadow-[0_0_20px_rgba(83,56,158,0.4)] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-3"
             >
-              ACCESS PORTAL
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  AUTHENTICATING...
+                </>
+              ) : 'ACCESS PORTAL'}
             </motion.button>
           </form>
 

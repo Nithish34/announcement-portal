@@ -9,11 +9,20 @@ import MovingBanner from '@/components/MovingBanner';
 import TransitionLoader from '@/components/TransitionLoader';
 
 export default function Timer() {
-  const [seconds, setSeconds] = useState<number>(10);
+  const [seconds, setSeconds] = useState<number | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const router = useRouter();
 
+  // Fetch phase1 timer from SystemConfig on mount
   useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/config/timers`)
+      .then(r => r.json())
+      .then(data => { setSeconds(Number(data.phase1_timer_seconds)); })
+      .catch(() => setSeconds(10)); // fallback to 10s if request fails
+  }, []);
+
+  useEffect(() => {
+    if (seconds === null) return;
     router.prefetch('/results');
 
     if (seconds <= 0) {
@@ -23,16 +32,17 @@ export default function Timer() {
     }
 
     const timer = setInterval(() => {
-      setSeconds((prev) => prev - 1);
+      setSeconds((prev) => (prev !== null ? prev - 1 : 0));
     }, 1000);
 
     return () => clearInterval(timer);
   }, [seconds, router]);
 
-  const days = Math.floor(seconds / (3600 * 24));
-  const hours = Math.floor((seconds % (3600 * 24)) / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
+  const s = seconds ?? 0;
+  const days = Math.floor(s / (3600 * 24));
+  const hours = Math.floor((s % (3600 * 24)) / 3600);
+  const minutes = Math.floor((s % 3600) / 60);
+  const secs = s % 60;
 
   const formatTime = (num: number): string => String(num).padStart(2, '0');
 
