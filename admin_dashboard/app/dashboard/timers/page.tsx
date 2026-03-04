@@ -6,19 +6,14 @@ import { Clock, Save, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
 type Toast = { msg: string; type: 'ok' | 'err' };
 
-interface TimerField {
-    key: string;
-    label: string;
-    hint: string;
-    id: string;
-}
+interface TimerField { key: string; label: string; hint: string; id: string; unit: string; }
 
 const fields: TimerField[] = [
-    { key: 'phase1_timer_seconds', label: 'Phase 1 Countdown', hint: 'Seconds before Phase 1 results are revealed', id: 'p1-timer' },
-    { key: 'phase2_timer_seconds', label: 'Phase 2 Countdown', hint: 'Seconds before Phase 2 results are revealed', id: 'p2-timer' },
-    { key: 'announcement_interval', label: 'Winner Reveal Interval', hint: 'Seconds per winner announcement (30 recommended)', id: 'announce-interval' },
-    { key: 'max_slots', label: 'Max Slots (Phase 1)', hint: 'Total participant slots for Phase 1 advancement', id: 'max-slots' },
-    { key: 'phase2_score_threshold', label: 'Phase 2 Score Threshold', hint: 'Minimum score (0-100) to qualify for Phase 3', id: 'p2-threshold' },
+    { key: 'phase1_timer_seconds', label: 'Phase 1 Countdown', hint: 'Seconds before Phase 1 results are revealed', id: 'p1-timer', unit: 'sec' },
+    { key: 'phase2_timer_seconds', label: 'Phase 2 Countdown', hint: 'Seconds before Phase 2 results are revealed', id: 'p2-timer', unit: 'sec' },
+    { key: 'announcement_interval', label: 'Winner Reveal Interval', hint: 'Seconds per winner announcement (30 recommended)', id: 'announce-interval', unit: 'sec' },
+    { key: 'max_slots', label: 'Max Slots (Phase 1)', hint: 'Total participant slots for Phase 1 advancement', id: 'max-slots', unit: 'slots' },
+    { key: 'phase2_score_threshold', label: 'Phase 2 Score Threshold', hint: 'Minimum score (0–100) to qualify for Phase 3', id: 'p2-threshold', unit: 'pts' },
 ];
 
 export default function TimersPage() {
@@ -56,59 +51,70 @@ export default function TimersPage() {
 
     return (
         <div>
-            <div className="mb-8">
-                <h1 className="text-2xl font-black tracking-[0.1em] uppercase text-white">Timer Settings</h1>
-                <p className="text-xs text-gray-500 tracking-widest mt-1">Configure countdown timers and evaluation thresholds</p>
+            {/* Header */}
+            <div className="page-header">
+                <div>
+                    <h1 className="page-title">Timer Settings</h1>
+                    <p className="page-subtitle">Configure countdown timers and evaluation thresholds</p>
+                </div>
+                <button onClick={save} disabled={saving || loading} className="btn btn-primary">
+                    {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    {saving ? 'Saving…' : 'Save All'}
+                </button>
             </div>
 
+            {/* Toast */}
             {toast && (
-                <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-5 py-3 rounded-xl border text-sm font-bold shadow-2xl
-          ${toast.type === 'ok' ? 'bg-[#0c0c12] border-[#10b981]/50 text-[#10b981]' : 'bg-[#0c0c12] border-red-500/50 text-red-400'}`}>
+                <div className={`toast ${toast.type === 'ok' ? 'toast-ok' : 'toast-err'}`}>
                     {toast.type === 'ok' ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
                     {toast.msg}
                 </div>
             )}
 
             {loading ? (
-                <div className="flex items-center justify-center h-48">
+                <div className="flex items-center justify-center h-52">
                     <Loader2 className="w-8 h-8 animate-spin text-[#53389e]" />
                 </div>
             ) : (
-                <div className="bg-[#0c0c12] border border-white/5 rounded-2xl p-6">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="w-9 h-9 rounded-xl bg-[#53389e]/20 border border-[#53389e]/30 flex items-center justify-center">
-                            <Clock className="w-4 h-4 text-[#a855f7]" />
+                <div className="card">
+                    <div className="card-header">
+                        <div className="card-icon"><Clock className="w-4 h-4 text-[#a855f7]" /></div>
+                        <div>
+                            <p className="card-title">Timing &amp; Slot Configuration</p>
+                            <p className="text-[10px] text-[#475569] mt-0.5">All numeric values — changes apply on next phase trigger</p>
                         </div>
-                        <h2 className="text-sm font-black tracking-[0.2em] uppercase text-white">Timing & Slot Configuration</h2>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
-                        {fields.map(({ key, label, hint, id }) => (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                        {fields.map(({ key, label, hint, id, unit }) => (
                             <div key={key}>
-                                <label htmlFor={id} className="block text-[10px] text-gray-400 font-black tracking-[0.25em] uppercase mb-1">
-                                    {label}
-                                </label>
-                                <input
-                                    id={id}
-                                    type="number"
-                                    min="1"
-                                    value={values[key] ?? ''}
-                                    onChange={e => setValues(prev => ({ ...prev, [key]: e.target.value }))}
-                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-mono text-sm focus:outline-none focus:border-[#53389e] focus:ring-1 focus:ring-[#53389e]/50 transition-colors"
-                                />
-                                <p className="text-[9px] text-gray-600 mt-1 tracking-wide">{hint}</p>
+                                <label htmlFor={id} className="label">{label}</label>
+                                <div className="relative">
+                                    <input
+                                        id={id}
+                                        type="number"
+                                        min="1"
+                                        value={values[key] ?? ''}
+                                        onChange={e => setValues(prev => ({ ...prev, [key]: e.target.value }))}
+                                        className="input font-mono pr-14"
+                                        placeholder="—"
+                                    />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#475569] font-bold uppercase tracking-wider">
+                                        {unit}
+                                    </span>
+                                </div>
+                                <p className="text-[9px] text-[#334155] mt-1.5 leading-relaxed">{hint}</p>
                             </div>
                         ))}
                     </div>
 
-                    <button
-                        onClick={save}
-                        disabled={saving}
-                        className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-[#53389e] to-[#a855f7] text-white font-black text-sm tracking-widest uppercase shadow-[0_0_20px_rgba(83,56,158,0.4)] hover:scale-[1.02] transition-transform disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                        {saving ? 'Saving…' : 'Save All Settings'}
-                    </button>
+                    <div className="divider" />
+                    <div className="flex justify-end">
+                        <button onClick={save} disabled={saving} className="btn btn-primary">
+                            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                            {saving ? 'Saving…' : 'Save All Settings'}
+                        </button>
+                    </div>
                 </div>
             )}
         </div>

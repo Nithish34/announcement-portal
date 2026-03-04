@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { apiGetAllTeams, apiCreateTeam, TeamRow } from '@/lib/api';
-import { Users, Plus, X, CheckCircle, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
+import { Users, Plus, X, CheckCircle, AlertCircle, Loader2, RefreshCw, ExternalLink } from 'lucide-react';
 
 type Toast = { msg: string; type: 'ok' | 'err' };
 
@@ -45,26 +45,26 @@ export default function TeamsPage() {
 
     return (
         <div>
-            <div className="flex items-center justify-between mb-8">
+            {/* Header */}
+            <div className="page-header">
                 <div>
-                    <h1 className="text-2xl font-black tracking-[0.1em] uppercase text-white">Teams</h1>
-                    <p className="text-xs text-gray-500 tracking-widest mt-1">{teams.length} teams registered</p>
+                    <h1 className="page-title">Teams</h1>
+                    <p className="page-subtitle">{teams.length} team{teams.length !== 1 ? 's' : ''} registered</p>
                 </div>
-                <div className="flex gap-2">
-                    <button onClick={load} disabled={loading} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-bold hover:bg-[#53389e]/20 transition-all disabled:opacity-50">
+                <div className="flex items-center gap-2.5">
+                    <button onClick={load} disabled={loading} className="btn btn-ghost">
                         <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
                     </button>
-                    <button onClick={() => setShowCreate(v => !v)}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#53389e] to-[#a855f7] text-white font-black text-xs tracking-widest uppercase shadow-[0_0_15px_rgba(83,56,158,0.3)] hover:scale-[1.02] transition-all">
-                        {showCreate ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                    <button onClick={() => setShowCreate(v => !v)} className="btn btn-primary">
+                        {showCreate ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
                         {showCreate ? 'Cancel' : 'New Team'}
                     </button>
                 </div>
             </div>
 
+            {/* Toast */}
             {toast && (
-                <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-5 py-3 rounded-xl border text-sm font-bold shadow-2xl
-          ${toast.type === 'ok' ? 'bg-[#0c0c12] border-[#10b981]/50 text-[#10b981]' : 'bg-[#0c0c12] border-red-500/50 text-red-400'}`}>
+                <div className={`toast ${toast.type === 'ok' ? 'toast-ok' : 'toast-err'}`}>
                     {toast.type === 'ok' ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
                     {toast.msg}
                 </div>
@@ -72,78 +72,82 @@ export default function TeamsPage() {
 
             {/* Create form */}
             {showCreate && (
-                <div className="bg-[#0c0c12] border border-[#53389e]/30 rounded-2xl p-6 mb-6 shadow-[0_0_20px_rgba(83,56,158,0.1)]">
-                    <h2 className="text-xs font-black tracking-[0.2em] uppercase text-white mb-4">Create New Team</h2>
+                <div className="card mb-5 border-[#53389e]/25 shadow-[0_0_24px_rgba(83,56,158,0.1)]">
+                    <div className="card-header">
+                        <div className="card-icon"><Plus className="w-4 h-4 text-[#a855f7]" /></div>
+                        <p className="card-title">Create New Team</p>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div>
-                            <label className="block text-[9px] text-gray-500 uppercase tracking-widest font-bold mb-1.5">Team Name *</label>
+                            <label className="label">Team Name *</label>
                             <input value={newName} onChange={e => setNewName(e.target.value)}
-                                placeholder="e.g. Team Alpha"
-                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-[#53389e] transition-colors" />
+                                placeholder="e.g. Team Alpha" className="input" />
                         </div>
                         <div>
-                            <label className="block text-[9px] text-gray-500 uppercase tracking-widest font-bold mb-1.5">Repository URL (optional)</label>
+                            <label className="label">Repository URL <span className="normal-case font-normal text-[#334155]">(optional)</span></label>
                             <input value={newRepo} onChange={e => setNewRepo(e.target.value)}
-                                placeholder="https://github.com/org/repo"
-                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-[#53389e] transition-colors" />
+                                placeholder="https://github.com/org/repo" className="input" />
                         </div>
                     </div>
-                    <button onClick={createTeam} disabled={creating || !newName.trim()}
-                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#53389e] to-[#a855f7] text-white font-black text-sm tracking-widest uppercase disabled:opacity-60">
-                        {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                    <button onClick={createTeam} disabled={creating || !newName.trim()} className="btn btn-primary">
+                        {creating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
                         {creating ? 'Creating…' : 'Create Team'}
                     </button>
                 </div>
             )}
 
             {loading ? (
-                <div className="flex items-center justify-center h-48"><Loader2 className="w-8 h-8 animate-spin text-[#53389e]" /></div>
+                <div className="flex items-center justify-center h-48">
+                    <Loader2 className="w-8 h-8 animate-spin text-[#53389e]" />
+                </div>
             ) : teams.length === 0 ? (
-                <div className="text-center py-20 text-gray-600">
-                    <Users className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                    <p className="text-sm font-bold tracking-widest uppercase">No teams yet</p>
-                    <p className="text-xs mt-1">Create a team to get started</p>
+                <div className="card text-center py-16">
+                    <Users className="w-10 h-10 mx-auto mb-4 text-[#334155]" />
+                    <p className="text-sm font-bold text-[#475569] tracking-widest uppercase">No teams yet</p>
+                    <p className="text-xs text-[#334155] mt-1">Create a team to get started</p>
                 </div>
             ) : (
-                <div className="bg-[#0c0c12] border border-white/5 rounded-2xl overflow-hidden">
-                    <table className="w-full text-sm">
+                <div className="data-table-wrap">
+                    <table className="data-table">
                         <thead>
-                            <tr className="border-b border-white/5 bg-white/[0.02]">
-                                {['Team Name', 'Members', 'Phase 1', 'Phase 2', 'Override', 'Repo'].map(h => (
-                                    <th key={h} className="text-left px-4 py-3 text-[9px] text-gray-500 font-black tracking-widest uppercase">{h}</th>
+                            <tr>
+                                {['Team', 'Members', 'Phase 1', 'Phase 2', 'Override', 'Repo'].map(h => (
+                                    <th key={h}>{h}</th>
                                 ))}
                             </tr>
                         </thead>
                         <tbody>
-                            {teams.map((team, i) => (
-                                <tr key={team.id}
-                                    className={`border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors ${i % 2 === 0 ? '' : 'bg-white/[0.01]'}`}>
-                                    <td className="px-4 py-3">
-                                        <p className="font-black text-white">{team.name}</p>
-                                        <p className="text-[9px] text-gray-600 font-mono mt-0.5">{team.id.slice(0, 8)}…</p>
+                            {teams.map(team => (
+                                <tr key={team.id}>
+                                    <td>
+                                        <p className="font-bold text-white text-sm">{team.name}</p>
+                                        <p className="text-[9px] text-[#334155] font-mono mt-0.5">{team.id.slice(0, 8)}…</p>
                                     </td>
-                                    <td className="px-4 py-3 text-gray-300 font-mono">{team._count?.members ?? '—'}</td>
-                                    <td className="px-4 py-3">
-                                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase border
-                      ${team.phase1Pass ? 'bg-[#10b981]/10 border-[#10b981]/40 text-[#10b981]' : 'bg-white/5 border-white/10 text-gray-500'}`}>
-                                            {team.phase1Pass ? 'PASS' : '—'}
+                                    <td>
+                                        <span className="font-mono text-[#94a3b8]">{team._count?.members ?? '—'}</span>
+                                    </td>
+                                    <td>
+                                        <span className={`badge ${team.phase1Pass ? 'badge-green' : 'badge-dim'}`}>
+                                            {team.phase1Pass ? 'Pass' : '—'}
                                         </span>
                                     </td>
-                                    <td className="px-4 py-3">
-                                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase border
-                      ${team.phase2Pass ? 'bg-[#10b981]/10 border-[#10b981]/40 text-[#10b981]' : 'bg-white/5 border-white/10 text-gray-500'}`}>
-                                            {team.phase2Pass ? 'PASS' : '—'}
+                                    <td>
+                                        <span className={`badge ${team.phase2Pass ? 'badge-green' : 'badge-dim'}`}>
+                                            {team.phase2Pass ? 'Pass' : '—'}
                                         </span>
                                     </td>
-                                    <td className="px-4 py-3">
+                                    <td>
                                         {team.resultOverride
-                                            ? <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase border border-[#ffd700]/40 text-[#ffd700] bg-[#ffd700]/10">{team.resultOverride}</span>
-                                            : <span className="text-gray-600 text-xs">AUTO</span>}
+                                            ? <span className="badge badge-gold">{team.resultOverride}</span>
+                                            : <span className="text-[#334155] text-xs font-bold">Auto</span>}
                                     </td>
-                                    <td className="px-4 py-3 text-[10px] text-gray-500">
+                                    <td>
                                         {team.repoUrl
-                                            ? <a href={team.repoUrl} target="_blank" rel="noreferrer" className="text-[#a855f7] underline underline-offset-2 hover:text-white">View</a>
-                                            : '—'}
+                                            ? <a href={team.repoUrl} target="_blank" rel="noreferrer"
+                                                className="inline-flex items-center gap-1 text-[#a855f7] text-xs hover:text-white transition-colors">
+                                                View <ExternalLink className="w-3 h-3" />
+                                            </a>
+                                            : <span className="text-[#334155] text-xs">—</span>}
                                     </td>
                                 </tr>
                             ))}

@@ -12,27 +12,21 @@ interface Stats {
     phase2Winners: number;
 }
 
-interface StatCardProps {
-    label: string;
-    value: number | string;
-    icon: React.ElementType;
-    color: string;
-    glow: string;
-}
-
-function StatCard({ label, value, icon: Icon, color, glow }: StatCardProps) {
+function StatCard({ label, value, icon: Icon, color, glow }: {
+    label: string; value: number | string; icon: React.ElementType; color: string; glow: string;
+}) {
     return (
-        <div className={`relative bg-[#0c0c12] border rounded-2xl p-6 overflow-hidden ${color}`}
-            style={{ boxShadow: `0 0 30px ${glow}` }}>
-            <div className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl opacity-20 ${color.replace('border-', 'bg-')}`} />
-            <div className="flex items-start justify-between">
+        <div className="stat-card" style={{ borderColor: `${glow}30`, boxShadow: `0 0 24px ${glow}14` }}>
+            <div className="absolute top-0 right-0 w-28 h-28 rounded-full blur-3xl opacity-10"
+                style={{ background: glow }} />
+            <div className="flex items-start justify-between relative">
                 <div>
-                    <p className="text-[10px] text-gray-500 font-black tracking-[0.25em] uppercase mb-2">{label}</p>
-                    <p className="text-4xl font-black text-white font-mono">{value}</p>
+                    <p className="text-[10px] font-black tracking-[0.2em] uppercase mb-2.5" style={{ color: `${glow}99` }}>{label}</p>
+                    <p className="text-4xl font-black font-mono text-white">{typeof value === 'number' ? value : '—'}</p>
                 </div>
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center border ${color}`}
-                    style={{ background: `${glow}22` }}>
-                    <Icon className="w-5 h-5" style={{ color: glow }} />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center border shrink-0"
+                    style={{ background: `${glow}18`, borderColor: `${glow}40` }}>
+                    <Icon className="w-4.5 h-4.5" style={{ color: glow }} />
                 </div>
             </div>
         </div>
@@ -48,10 +42,7 @@ export default function OverviewPage() {
     const load = useCallback(async () => {
         setLoading(true);
         try {
-            const [s, cfgRows] = await Promise.all([
-                apiGetDashboard(),
-                apiGetAllConfig(),
-            ]);
+            const [s, cfgRows] = await Promise.all([apiGetDashboard(), apiGetAllConfig()]);
             setStats(s);
             const map: Record<string, string> = {};
             cfgRows.forEach(r => { map[r.key] = r.value; });
@@ -67,11 +58,7 @@ export default function OverviewPage() {
         socket.connect();
         socket.on('config:updated', () => load());
         socket.on('config:batch-updated', () => load());
-        return () => {
-            socket.off('config:updated');
-            socket.off('config:batch-updated');
-            socket.disconnect();
-        };
+        return () => { socket.off('config:updated'); socket.off('config:batch-updated'); socket.disconnect(); };
     }, [load]);
 
     const currentPhase = config['current_phase'] ?? '—';
@@ -80,51 +67,50 @@ export default function OverviewPage() {
 
     return (
         <div>
-            {/* Header */}
-            <div className="flex items-center justify-between mb-8">
+            {/* Page Header */}
+            <div className="page-header">
                 <div>
-                    <h1 className="text-2xl font-black tracking-[0.1em] uppercase text-white">System Overview</h1>
-                    <p className="text-xs text-gray-500 tracking-widest mt-1">
-                        {lastUpdated ? `Last refreshed: ${lastUpdated.toLocaleTimeString()}` : 'Loading...'}
+                    <h1 className="page-title">System Overview</h1>
+                    <p className="page-subtitle">
+                        {lastUpdated ? `Last refreshed: ${lastUpdated.toLocaleTimeString()}` : 'Loading data…'}
                     </p>
                 </div>
-                <button
-                    onClick={load}
-                    disabled={loading}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-bold tracking-wider hover:bg-[#53389e]/20 hover:border-[#53389e]/40 transition-all disabled:opacity-50"
-                >
+                <button onClick={load} disabled={loading} className="btn btn-ghost">
                     <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
                     Refresh
                 </button>
             </div>
 
-            {/* Status pills */}
-            <div className="flex items-center gap-3 mb-8 flex-wrap">
-                <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black tracking-widest border ${regOpen ? 'bg-[#10b981]/10 border-[#10b981]/40 text-[#10b981]' : 'bg-red-500/10 border-red-500/30 text-red-400'}`}>
-                    <div className={`w-2 h-2 rounded-full ${regOpen ? 'bg-[#10b981]' : 'bg-red-500'} animate-pulse`} />
-                    REGISTRATION {regOpen ? 'OPEN' : 'CLOSED'}
-                </div>
-                <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black tracking-widest border ${resultsLocked ? 'bg-red-500/10 border-red-500/30 text-red-400' : 'bg-[#10b981]/10 border-[#10b981]/40 text-[#10b981]'}`}>
-                    <div className={`w-2 h-2 rounded-full ${resultsLocked ? 'bg-red-500' : 'bg-[#10b981]'} animate-pulse`} />
-                    RESULTS {resultsLocked ? 'LOCKED' : 'RELEASED'}
-                </div>
-                <div className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black tracking-widest border bg-[#53389e]/10 border-[#53389e]/40 text-[#a855f7]">
-                    <Zap className="w-3 h-3" />
-                    PHASE {currentPhase} ACTIVE
-                </div>
+            {/* Status Pills */}
+            <div className="flex items-center gap-2.5 mb-7 flex-wrap">
+                <span className={`badge ${regOpen ? 'badge-green' : 'badge-red'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${regOpen ? 'bg-[#10b981]' : 'bg-red-400'} animate-pulse`} />
+                    Registration {regOpen ? 'Open' : 'Closed'}
+                </span>
+                <span className={`badge ${resultsLocked ? 'badge-red' : 'badge-green'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${resultsLocked ? 'bg-red-400' : 'bg-[#10b981]'} animate-pulse`} />
+                    Results {resultsLocked ? 'Locked' : 'Released'}
+                </span>
+                <span className="badge badge-violet">
+                    <Zap className="w-2.5 h-2.5 mr-1" />
+                    Phase {currentPhase} Active
+                </span>
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <StatCard label="Total Teams" value={stats?.totalTeams ?? '—'} icon={Users} color="border-[#53389e]/30" glow="#53389e" />
-                <StatCard label="Total Users" value={stats?.totalUsers ?? '—'} icon={Database} color="border-[#a855f7]/30" glow="#a855f7" />
-                <StatCard label="Phase 1 Winners" value={stats?.phase1Winners ?? '—'} icon={Trophy} color="border-[#ffd700]/30" glow="#ffd700" />
-                <StatCard label="Phase 2 Winners" value={stats?.phase2Winners ?? '—'} icon={Activity} color="border-[#10b981]/30" glow="#10b981" />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
+                <StatCard label="Total Teams" value={stats?.totalTeams ?? '—'} icon={Users} glow="#7c3aed" color="" />
+                <StatCard label="Total Users" value={stats?.totalUsers ?? '—'} icon={Database} glow="#a855f7" color="" />
+                <StatCard label="Phase 1 Winners" value={stats?.phase1Winners ?? '—'} icon={Trophy} glow="#f59e0b" color="" />
+                <StatCard label="Phase 2 Winners" value={stats?.phase2Winners ?? '—'} icon={Activity} glow="#10b981" color="" />
             </div>
 
             {/* Config Snapshot */}
-            <div className="bg-[#0c0c12] border border-white/5 rounded-2xl p-6">
-                <h2 className="text-xs font-black tracking-[0.2em] uppercase text-white mb-4">Live Config Snapshot</h2>
+            <div className="card">
+                <div className="card-header">
+                    <div className="card-icon"><Database className="w-4 h-4 text-[#a855f7]" /></div>
+                    <span className="card-title">Live Config Snapshot</span>
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {[
                         { key: 'phase1_timer_seconds', label: 'Phase 1 Timer' },
@@ -136,8 +122,8 @@ export default function OverviewPage() {
                         { key: 'registration_open', label: 'Registration' },
                         { key: 'results_locked', label: 'Results Lock' },
                     ].map(({ key, label }) => (
-                        <div key={key} className="bg-black/30 border border-white/5 rounded-xl p-3">
-                            <p className="text-[9px] text-gray-500 font-bold tracking-widest uppercase mb-1">{label}</p>
+                        <div key={key} className="bg-black/25 border border-white/[0.06] rounded-xl p-3.5">
+                            <p className="text-[9px] text-[#475569] font-bold tracking-widest uppercase mb-1.5">{label}</p>
                             <p className="text-sm font-black text-[#a855f7] font-mono">{config[key] ?? '—'}</p>
                         </div>
                     ))}
