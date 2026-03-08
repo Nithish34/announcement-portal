@@ -49,12 +49,10 @@ services:
   - type: redis
     name: ghost-protocol-redis
     plan: free
-    ipAllowList: []
 
 databases:
   # The PostgreSQL database
-  - type: psql
-    name: ghost-protocol-db
+  - name: ghost-protocol-db
     databaseName: ghost_protocol
     user: ghost_user
     plan: free
