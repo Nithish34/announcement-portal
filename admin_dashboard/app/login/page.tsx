@@ -22,7 +22,7 @@ export default function LoginPage() {
             if (ok) {
                 router.push('/dashboard');
             } else {
-                setError('Invalid credentials or insufficient privileges. ADMIN role required.');
+                setError('Invalid credentials. Check your email and password.');
             }
         } catch {
             setError('Cannot connect to the Ghost Protocol backend. Is it running?');

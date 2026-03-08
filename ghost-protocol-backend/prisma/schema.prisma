@@ -11,7 +11,7 @@ datasource db {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// User — individual participant or admin
+// User — participant only (admins live in the Admin table)
 // ─────────────────────────────────────────────────────────────────────────────
 model User {
   id        String   @id @default(cuid())
@@ -26,6 +26,19 @@ model User {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Admin — completely separate from participant Users.
+// Only admins can add or remove other admins.
+// ─────────────────────────────────────────────────────────────────────────────
+model Admin {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  password    String
+  name        String   @default("")
+  createdAt   DateTime @default(now())
+  createdById String?  // id of Admin who created this one (null = seed/bootstrap admin)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Team — hackathon team
 // ─────────────────────────────────────────────────────────────────────────────
 model Team {
@@ -35,13 +48,13 @@ model Team {
   repoUrl        String?
   phase1Pass     Boolean  @default(false)
   phase2Pass     Boolean  @default(false)
-  resultOverride Result?  // manually forced winner/loser, overrides slot logic
+  resultOverride Result?
+  isAdminTeam    Boolean  @default(false)
   createdAt      DateTime @default(now())
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SystemConfig — key/value store for runtime feature flags & workflow state
-// Replaces the Redis `workflow_state` key — no ioredis needed.
+// SystemConfig — key/value store for runtime flags & workflow state
 // ─────────────────────────────────────────────────────────────────────────────
 model SystemConfig {
   key       String   @id

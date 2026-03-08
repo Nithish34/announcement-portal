@@ -9,21 +9,30 @@ import DynamicBackground from '@/components/DynamicBackground';
 import MovingBanner from '@/components/MovingBanner';
 
 export default function Timer2() {
+    const [targetDate, setTargetDate] = useState<Date | null>(null);
     const [seconds, setSeconds] = useState<number | null>(null);
     const router = useRouter();
     const [isRedirecting, setIsRedirecting] = useState(false);
 
-    // Fetch phase2 timer from SystemConfig on mount
+    // Fetch phase2_start_datetime from backend on mount
     useEffect(() => {
         fetch(`${process.env.NEXT_PUBLIC_API_URL}/config/timers`)
             .then(r => r.json())
-            .then(data => { setSeconds(Number(data.phase2_timer_seconds)); })
-            .catch(() => setSeconds(5)); // fallback
+            .then(data => {
+                if (data.phase2_start_datetime) {
+                    const target = new Date(data.phase2_start_datetime);
+                    setTargetDate(target);
+                    setSeconds(Math.max(0, Math.floor((target.getTime() - Date.now()) / 1000)));
+                } else {
+                    setSeconds(0); // no datetime set → go straight to results
+                }
+            })
+            .catch(() => setSeconds(0));
     }, []);
 
+    // Tick every second — recompute from target to stay in sync with wall-clock
     useEffect(() => {
         if (seconds === null) return;
-        // Prefetch the route silently while the user waits to eliminate dev compile delay!
         router.prefetch('/results-2');
 
         if (seconds <= 0) {
@@ -33,11 +42,16 @@ export default function Timer2() {
         }
 
         const timer = setInterval(() => {
-            setSeconds((prev) => (prev !== null ? prev - 1 : 0));
+            if (targetDate) {
+                const remaining = Math.max(0, Math.floor((targetDate.getTime() - Date.now()) / 1000));
+                setSeconds(remaining);
+            } else {
+                setSeconds(prev => (prev !== null ? Math.max(0, prev - 1) : 0));
+            }
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [seconds, router]);
+    }, [seconds, targetDate, router]);
 
     const s = seconds ?? 0;
     const days = Math.floor(s / (3600 * 24));

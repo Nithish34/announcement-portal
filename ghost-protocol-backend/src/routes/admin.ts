@@ -7,41 +7,47 @@ import {
     resetPortal,
     getWorkflowState,
     toggleWorkflowState,
-    // New config-driven handlers
     getAllConfig,
     updateConfigByKey,
     batchUpdateConfig,
     setTeamOverride,
     clearTeamOverride,
 } from '../controllers/admin.controller';
-import { requireAdmin } from '../middleware/auth';
+import {
+    adminLogin,
+    listAdmins,
+    addAdmin,
+    removeAdmin,
+} from '../controllers/admin-auth.controller';
+import { requireAdminAuth } from '../middleware/auth';
+import { authLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
-// ── Existing routes (unchanged) ─────────────────────────────────────────────
-router.get('/dashboard', requireAdmin, getDashboard);
-router.get('/workflow', requireAdmin, getWorkflowState);
-router.post('/workflow/toggle', requireAdmin, toggleWorkflowState);
-router.post('/results', requireAdmin, setEvaluationResult);
-router.post('/ghost-protocol', requireAdmin, triggerGhostProtocol);
-router.post('/broadcast', requireAdmin, broadcastAnnouncement);
-router.post('/reset', requireAdmin, resetPortal);
+// ── Admin authentication (Admin table) ────────────────────────────────────────
+router.post('/auth/login', authLimiter, adminLogin);
 
-// ── New SystemConfig routes ──────────────────────────────────────────────────
-// GET  /api/admin/config          — all config rows as a flat array
-router.get('/config', requireAdmin, getAllConfig);
+// ── Admin management (only admins can add / remove admins) ────────────────────
+router.get('/admins', requireAdminAuth, listAdmins);
+router.post('/admins', requireAdminAuth, addAdmin);
+router.delete('/admins/:adminId', requireAdminAuth, removeAdmin);
 
-// PATCH /api/admin/config/:key    — update one config value
-router.patch('/config/:key', requireAdmin, updateConfigByKey);
+// ── Dashboard & system routes ─────────────────────────────────────────────────
+router.get('/dashboard', requireAdminAuth, getDashboard);
+router.get('/workflow', requireAdminAuth, getWorkflowState);
+router.post('/workflow/toggle', requireAdminAuth, toggleWorkflowState);
+router.post('/results', requireAdminAuth, setEvaluationResult);
+router.post('/ghost-protocol', requireAdminAuth, triggerGhostProtocol);
+router.post('/broadcast', requireAdminAuth, broadcastAnnouncement);
+router.post('/reset', requireAdminAuth, resetPortal);
 
-// PATCH /api/admin/config         — batch update multiple config values
-router.patch('/config', requireAdmin, batchUpdateConfig);
+// ── SystemConfig routes ───────────────────────────────────────────────────────
+router.get('/config', requireAdminAuth, getAllConfig);
+router.patch('/config/:key', requireAdminAuth, updateConfigByKey);
+router.patch('/config', requireAdminAuth, batchUpdateConfig);
 
-// ── Team override routes ─────────────────────────────────────────────────────
-// PATCH /api/admin/teams/:teamId/override  — force winner or loser
-router.patch('/teams/:teamId/override', requireAdmin, setTeamOverride);
-
-// DELETE /api/admin/teams/:teamId/override — clear override (back to auto)
-router.delete('/teams/:teamId/override', requireAdmin, clearTeamOverride);
+// ── Team override routes ──────────────────────────────────────────────────────
+router.patch('/teams/:teamId/override', requireAdminAuth, setTeamOverride);
+router.delete('/teams/:teamId/override', requireAdminAuth, clearTeamOverride);
 
 export default router;

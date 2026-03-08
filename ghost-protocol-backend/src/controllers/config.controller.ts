@@ -1,18 +1,25 @@
 import { Request, Response } from 'express';
-import { getConfigNumber } from '../utils/config';
+import { getConfigNumber, getConfig } from '../utils/config';
 
 // GET /api/config/timers
-// Returns phase1_timer_seconds, phase2_timer_seconds, and announcement_interval from SystemConfig.
-// No auth required — timers are read by the public-facing timer pages.
+// Returns phase1_start_datetime, phase2_start_datetime (ISO strings) and
+// announcement_interval (number). No auth required.
 export async function getTimers(_req: Request, res: Response): Promise<void> {
     try {
-        const [phase1_timer_seconds, phase2_timer_seconds, announcement_interval] = await Promise.all([
-            getConfigNumber('phase1_timer_seconds'),
-            getConfigNumber('phase2_timer_seconds'),
-            getConfigNumber('announcement_interval'),
+        // Helper: read optional config key — returns null if not set yet
+        const readOptional = async (key: string): Promise<string | null> => {
+            try { return await getConfig(key); }
+            catch { return null; }
+        };
+
+        const [phase1_start_datetime, phase2_start_datetime, announcement_interval, max_slots] = await Promise.all([
+            readOptional('phase1_start_datetime'),
+            readOptional('phase2_start_datetime'),
+            getConfigNumber('announcement_interval').catch(() => 30),
+            getConfigNumber('max_slots').catch(() => 20),
         ]);
 
-        res.json({ phase1_timer_seconds, phase2_timer_seconds, announcement_interval });
+        res.json({ phase1_start_datetime, phase2_start_datetime, announcement_interval, max_slots });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to read timer config' });

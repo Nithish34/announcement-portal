@@ -36,14 +36,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const login = async (email: string, password: string): Promise<boolean> => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),
             });
             if (!res.ok) return false;
             const data = await res.json();
-            if (data.user?.role !== 'ADMIN') return false;
 
             localStorage.setItem('admin_token', data.token);
             localStorage.setItem('admin_user', JSON.stringify(data.user));

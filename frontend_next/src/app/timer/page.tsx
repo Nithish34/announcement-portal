@@ -9,18 +9,29 @@ import MovingBanner from '@/components/MovingBanner';
 import TransitionLoader from '@/components/TransitionLoader';
 
 export default function Timer() {
+  const [targetDate, setTargetDate] = useState<Date | null>(null);
   const [seconds, setSeconds] = useState<number | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const router = useRouter();
 
-  // Fetch phase1 timer from SystemConfig on mount
+  // Fetch phase1_start_datetime from backend on mount
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/config/timers`)
       .then(r => r.json())
-      .then(data => { setSeconds(Number(data.phase1_timer_seconds)); })
-      .catch(() => setSeconds(10)); // fallback to 10s if request fails
+      .then(data => {
+        if (data.phase1_start_datetime) {
+          const target = new Date(data.phase1_start_datetime);
+          setTargetDate(target);
+          // Initialise seconds immediately so the timer shows right away
+          setSeconds(Math.max(0, Math.floor((target.getTime() - Date.now()) / 1000)));
+        } else {
+          setSeconds(0); // no datetime set → go straight to results
+        }
+      })
+      .catch(() => setSeconds(0));
   }, []);
 
+  // Tick every second — recompute from target to stay in sync with wall-clock
   useEffect(() => {
     if (seconds === null) return;
     router.prefetch('/results');
@@ -32,11 +43,16 @@ export default function Timer() {
     }
 
     const timer = setInterval(() => {
-      setSeconds((prev) => (prev !== null ? prev - 1 : 0));
+      if (targetDate) {
+        const remaining = Math.max(0, Math.floor((targetDate.getTime() - Date.now()) / 1000));
+        setSeconds(remaining);
+      } else {
+        setSeconds(prev => (prev !== null ? Math.max(0, prev - 1) : 0));
+      }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [seconds, router]);
+  }, [seconds, targetDate, router]);
 
   const s = seconds ?? 0;
   const days = Math.floor(s / (3600 * 24));

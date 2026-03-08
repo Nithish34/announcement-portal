@@ -117,12 +117,13 @@ export default function Results2() {
 
                 setTimeLeft(30);
 
-                await new Promise(r => setTimeout(r, 1000));
+                // Wait the full interval BEFORE showing the result (suspense)
+                await new Promise(r => setTimeout(r, 30000));
                 if (unmounted) return;
 
                 setCurrentWinner(winner);
 
-                // Big Popup highlight
+                // Big Popup highlight for 5s
                 await new Promise(r => setTimeout(r, 5000));
                 if (unmounted) return;
 
@@ -133,10 +134,6 @@ export default function Results2() {
                 if (userIdRef.current === winner.id) {
                     setIsUnlocked(true);
                 }
-
-                // Wait the remaining 24s from the 30s cycle
-                await new Promise(r => setTimeout(r, 24000));
-                if (unmounted) return;
             }
 
             setTimeLeft(null);

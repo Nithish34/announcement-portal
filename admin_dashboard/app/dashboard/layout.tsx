@@ -5,25 +5,15 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import {
-    Shield, LayoutDashboard, Settings, Trophy, Users,
-    Database, LogOut, Zap, Activity, UserPlus, ChevronRight
+    Shield, LayoutDashboard, Settings, Trophy,
+    LogOut, UserPlus, ChevronRight
 } from 'lucide-react';
 
 const navItems = [
-    { href: '/dashboard', label: 'Overview', icon: LayoutDashboard, group: 'main' },
-    { href: '/dashboard/phase-control', label: 'Phase Control', icon: Zap, group: 'main' },
-    { href: '/dashboard/timers', label: 'Timers', icon: Settings, group: 'main' },
-    { href: '/dashboard/results', label: 'Results', icon: Trophy, group: 'data' },
-    { href: '/dashboard/teams', label: 'Teams', icon: Users, group: 'data' },
-    { href: '/dashboard/overrides', label: 'Overrides', icon: Activity, group: 'data' },
-    { href: '/dashboard/users', label: 'Create User', icon: UserPlus, group: 'system' },
-    { href: '/dashboard/config', label: 'Raw Config', icon: Database, group: 'system' },
-];
-
-const groups = [
-    { key: 'main', label: 'Control' },
-    { key: 'data', label: 'Data' },
-    { key: 'system', label: 'System' },
+    { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
+    { href: '/dashboard/users', label: 'Admin Management', icon: UserPlus },
+    { href: '/dashboard/results', label: 'Evaluation', icon: Trophy },
+    { href: '/dashboard/timers', label: 'Settings', icon: Settings },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -69,41 +59,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto">
-                    {groups.map(group => {
-                        const items = navItems.filter(n => n.group === group.key);
-                        return (
-                            <div key={group.key}>
-                                <p className="text-[9px] font-black tracking-[0.22em] text-[#334155] uppercase px-2 mb-1.5">{group.label}</p>
-                                <div className="space-y-0.5">
-                                    {items.map(({ href, label, icon: Icon }) => {
-                                        const active = pathname === href;
-                                        return (
-                                            <Link
-                                                key={href}
-                                                href={href}
-                                                className={`
-                                                    flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[0.8rem] font-semibold
-                                                    tracking-wide transition-all duration-150 group relative
-                                                    ${active
-                                                        ? 'bg-[#53389e]/20 text-white border border-[#53389e]/30'
-                                                        : 'text-[#64748b] hover:text-[#cbd5e1] hover:bg-white/[0.04] border border-transparent'
-                                                    }
-                                                `}
-                                            >
-                                                {active && (
-                                                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-[#a855f7] rounded-full" />
-                                                )}
-                                                <Icon className={`w-3.5 h-3.5 shrink-0 transition-colors ${active ? 'text-[#a855f7]' : 'text-[#475569] group-hover:text-[#7c3aed]'}`} strokeWidth={2} />
-                                                <span className="flex-1">{label}</span>
-                                                {active && <ChevronRight className="w-3 h-3 text-[#53389e] ml-auto" />}
-                                            </Link>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        );
-                    })}
+                <nav className="flex-1 px-3 py-4 overflow-y-auto">
+                    <div className="space-y-0.5">
+                        {navItems.map(({ href, label, icon: Icon }) => {
+                            const active = pathname === href;
+                            return (
+                                <Link
+                                    key={href}
+                                    href={href}
+                                    className={`
+                                        flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[0.8rem] font-semibold
+                                        tracking-wide transition-all duration-150 group relative
+                                        ${active
+                                            ? 'bg-[#53389e]/20 text-white border border-[#53389e]/30'
+                                            : 'text-[#64748b] hover:text-[#cbd5e1] hover:bg-white/[0.04] border border-transparent'
+                                        }
+                                    `}
+                                >
+                                    {active && (
+                                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-[#a855f7] rounded-full" />
+                                    )}
+                                    <Icon className={`w-3.5 h-3.5 shrink-0 transition-colors ${active ? 'text-[#a855f7]' : 'text-[#475569] group-hover:text-[#7c3aed]'}`} strokeWidth={2} />
+                                    <span className="flex-1">{label}</span>
+                                    {active && <ChevronRight className="w-3 h-3 text-[#53389e] ml-auto" />}
+                                </Link>
+                            );
+                        })}
+                    </div>
                 </nav>
 
                 {/* User / Footer */}
