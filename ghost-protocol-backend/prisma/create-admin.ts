@@ -1,3 +1,14 @@
+/**
+ * create-admin.ts
+ * ──────────────────────────────────────────────────────────────────────────────
+ * Bootstraps the first admin account in the dedicated Admin table.
+ * Safe to re-run — performs an upsert (updates password if admin already exists).
+ *
+ * Run with:
+ *   npx tsx prisma/create-admin.ts
+ * ──────────────────────────────────────────────────────────────────────────────
+ */
+
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -8,49 +19,38 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter } as ConstructorParameters<typeof PrismaClient>[0]);
 
+const ADMIN_EMAIL = 'admin@eduspine.com';
+const ADMIN_PASSWORD = 'Admin@1234';
+const ADMIN_NAME = 'Super Admin';
+
 async function main() {
-    console.log('🔧 Bootstrapping admin user...\n');
+    console.log('🔧 Bootstrapping Admin account...\n');
 
-    // Step 1: Ensure an "Admin" team exists
-    let team = await prisma.team.findFirst({ where: { name: 'Admin' } });
-    if (!team) {
-        team = await prisma.team.create({ data: { name: 'Admin' } });
-        console.log(`✔ Created team: Admin (id: ${team.id})`);
-    } else {
-        console.log(`✔ Using existing team: Admin (id: ${team.id})`);
-    }
+    const hash = await bcrypt.hash(ADMIN_PASSWORD, 12);
 
-    // Step 2: Create the admin user (upsert so it's safe to re-run)
-    const email = 'admin@eduspine.com';
-    const plainPassword = 'Admin@1234';
-    const passwordHash = await bcrypt.hash(plainPassword, 12);
+    const existing = await prisma.admin.findUnique({ where: { email: ADMIN_EMAIL } });
 
-    const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-        // Update password and role in case they changed
-        await prisma.user.update({
-            where: { email },
-            data: { password: passwordHash, role: 'ADMIN' },
+        // Update password in case it changed
+        await prisma.admin.update({
+            where: { email: ADMIN_EMAIL },
+            data: { password: hash, name: ADMIN_NAME },
         });
-        console.log(`✔ Updated existing user "${email}" — role set to ADMIN`);
+        console.log(`✔ Updated existing admin "${ADMIN_EMAIL}"`);
     } else {
-        await prisma.user.create({
-            data: {
-                email,
-                password: passwordHash,
-                role: 'ADMIN',
-                teamId: team.id,
-            },
+        const admin = await prisma.admin.create({
+            data: { email: ADMIN_EMAIL, password: hash, name: ADMIN_NAME },
+            select: { id: true, email: true, name: true },
         });
-        console.log(`✔ Created user "${email}" with role ADMIN`);
+        console.log(`✔ Created admin "${admin.email}" (id: ${admin.id})`);
     }
 
     console.log('\n✅ Done! Admin credentials:');
-    console.log(`   Email   : ${email}`);
-    console.log(`   Password: ${plainPassword}`);
-    console.log(`\n   Login at: http://localhost:3001/login`);
+    console.log(`   Email   : ${ADMIN_EMAIL}`);
+    console.log(`   Password: ${ADMIN_PASSWORD}`);
+    console.log(`\n   Login at: http://localhost:3001/login\n`);
 }
 
 main()
     .catch(e => { console.error('❌ Error:', e.message); process.exit(1); })
-    .finally(async () => { await prisma.$disconnect(); pool.end(); });
+    .finally(async () => { await prisma.$disconnect(); await pool.end(); });

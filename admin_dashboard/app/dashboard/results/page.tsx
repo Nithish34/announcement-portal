@@ -1,28 +1,95 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { apiGetPhase1Results, apiGetPhase2Results, apiEvaluatePhase1, apiEvaluatePhase2 } from '@/lib/api';
-import { getSocket } from '@/lib/socket';
-import { Trophy, Users, User, CheckCircle, AlertCircle, Loader2, Play, RefreshCw } from 'lucide-react';
+import {
+    apiGetAllTeams, apiGetAllConfig,
+    apiEvaluatePhase1, apiEvaluatePhase2,
+    TeamRow,
+} from '@/lib/api';
+import {
+    Trophy, Users, User, CheckCircle, AlertCircle,
+    Loader2, Play, RefreshCw, TriangleAlert
+} from 'lucide-react';
 
 type Toast = { msg: string; type: 'ok' | 'err' };
-type Phase = '1' | '2';
+type Tab = 'eval1' | 'eval2';
 
-interface Phase1Team {
-    id: string; name: string; memberCount: number;
-    result: 'WINNER' | 'LOSER'; phase1Pass: boolean; resultOverride: string | null;
-}
-interface Phase2User {
-    id: string; email: string; role: string;
-    result: 'WINNER' | 'LOSER' | null; team: { name: string };
+interface MemberRow {
+    id: string;
+    email: string;
+    role: string;
+    result: string | null;
 }
 
-export default function ResultsPage() {
-    const [phase, setPhase] = useState<Phase>('1');
-    const [phase1Data, setPhase1Data] = useState<Phase1Team[]>([]);
-    const [phase2Data, setPhase2Data] = useState<Phase2User[]>([]);
+interface TeamWithMembers extends TeamRow {
+    members?: MemberRow[];
+}
+
+// ─── helpers ────────────────────────────────────────────────────────────────
+const BASE = process.env.NEXT_PUBLIC_API_URL!;
+function getToken() {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('admin_token');
+}
+async function apiFetchInner<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const token = getToken();
+    const res = await fetch(`${BASE}${endpoint}`, {
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            ...options.headers,
+        },
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { error?: string }).error ?? `HTTP ${res.status}`);
+    }
+    return res.json() as Promise<T>;
+}
+
+// Fetch a single team with its members list
+function apiGetTeamWithMembers(id: string): Promise<TeamWithMembers> {
+    return apiFetchInner<TeamWithMembers>(`/teams/${id}`);
+}
+
+// ─── Slot counter bar ────────────────────────────────────────────────────────
+function SlotBar({ selected, max, color }: { selected: number; max: number; color: string }) {
+    const pct = max > 0 ? Math.min((selected / max) * 100, 100) : 0;
+    const full = selected >= max;
+    return (
+        <div className="flex items-center gap-4">
+            <div className="flex-1 h-2 bg-white/[0.06] rounded-full overflow-hidden">
+                <div
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{ width: `${pct}%`, background: full ? '#ef4444' : color }}
+                />
+            </div>
+            <span className={`text-sm font-black font-mono shrink-0 ${full ? 'text-red-400' : 'text-white'}`}>
+                {selected} <span className="text-[#475569]">/ {max}</span>
+            </span>
+        </div>
+    );
+}
+
+// ─── Main component ──────────────────────────────────────────────────────────
+export default function EvaluationPage() {
+    const [tab, setTab] = useState<Tab>('eval1');
+
+    // ── Eval 1: team selection ────────────────────────────────────────────────
+    const [teams, setTeams] = useState<TeamRow[]>([]);
+    const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
+    const [maxSlotsEval1, setMaxSlotsEval1] = useState(0);
+
+    // ── Eval 2: individual selection ──────────────────────────────────────────
+    const [passedTeams, setPassedTeams] = useState<TeamWithMembers[]>([]);
+    const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+    const [maxSlotsEval2, setMaxSlotsEval2] = useState(0);
+    const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
+
+    // ── Shared state ──────────────────────────────────────────────────────────
     const [loading, setLoading] = useState(true);
-    const [evaluating, setEvaluating] = useState(false);
+    const [publishing, setPublishing] = useState(false);
     const [toast, setToast] = useState<Toast | null>(null);
 
     const notify = (msg: string, type: 'ok' | 'err' = 'ok') => {
@@ -30,57 +97,136 @@ export default function ResultsPage() {
         setTimeout(() => setToast(null), 3500);
     };
 
+    // Load config for max slots
+    const loadConfig = useCallback(async () => {
+        try {
+            const rows = await apiGetAllConfig();
+            const map: Record<string, string> = {};
+            rows.forEach(r => { map[r.key] = r.value; });
+            setMaxSlotsEval1(Number(map['max_slots'] ?? 0));
+            setMaxSlotsEval2(Number(map['max_slots_eval2'] ?? 0));
+        } catch { /* ignore */ }
+    }, []);
+
+    // Load all teams for Eval 1
+    const loadTeams = useCallback(async () => {
+        try {
+            const data = await apiGetAllTeams();
+            setTeams(data);
+            // Pre-select teams already marked as passed
+            const alreadyPassed = new Set(data.filter(t => t.phase1Pass).map(t => t.id));
+            setSelectedTeams(alreadyPassed);
+        } catch { notify('Failed to load teams', 'err'); }
+    }, []);
+
+    // Load passed teams WITH members for Eval 2
+    const loadPassedTeamsWithMembers = useCallback(async (allTeams: TeamRow[]) => {
+        const passed = allTeams.filter(t => t.phase1Pass);
+        try {
+            const withMembers = await Promise.all(passed.map(t => apiGetTeamWithMembers(t.id)));
+            setPassedTeams(withMembers);
+            // Pre-select users already marked as WINNER
+            const alreadyWon = new Set(
+                withMembers.flatMap(t => (t.members ?? []).filter(m => m.result === 'WINNER').map(m => m.id))
+            );
+            setSelectedUsers(alreadyWon);
+        } catch { notify('Failed to load team members', 'err'); }
+    }, []);
+
     const load = useCallback(async () => {
         setLoading(true);
         try {
-            const [p1, p2] = await Promise.all([apiGetPhase1Results(), apiGetPhase2Results()]);
-            setPhase1Data(p1 as Phase1Team[]);
-            setPhase2Data(p2 as Phase2User[]);
-        } catch { notify('Failed to load results', 'err'); }
+            await loadConfig();
+            const allTeams = await apiGetAllTeams();
+            setTeams(allTeams);
+            const alreadyPassed = new Set(allTeams.filter(t => t.phase1Pass).map(t => t.id));
+            setSelectedTeams(alreadyPassed);
+            await loadPassedTeamsWithMembers(allTeams);
+        } catch { notify('Failed to load data', 'err'); }
         setLoading(false);
-    }, []);
+    }, [loadConfig, loadPassedTeamsWithMembers]);
 
-    useEffect(() => {
-        load();
-        const socket = getSocket();
-        socket.connect();
-        socket.on('phase1:published', load);
-        socket.on('phase2:published', load);
-        return () => { socket.off('phase1:published'); socket.off('phase2:published'); socket.disconnect(); };
-    }, [load]);
+    useEffect(() => { load(); }, [load]);
 
-    const evaluatePhase1 = async () => {
-        const winnerIds = phase1Data.filter(t => t.result === 'WINNER').map(t => t.id);
-        setEvaluating(true);
-        try {
-            await apiEvaluatePhase1(winnerIds);
-            notify(`✓ Phase 1 published — ${winnerIds.length} teams advanced`);
-            load();
-        } catch { notify('Failed to publish Phase 1', 'err'); }
-        setEvaluating(false);
+    // ── Eval 1 handlers ───────────────────────────────────────────────────────
+    const toggleTeam = (id: string) => {
+        setSelectedTeams(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) {
+                next.delete(id);
+            } else {
+                if (maxSlotsEval1 > 0 && next.size >= maxSlotsEval1) {
+                    notify(`Max slots for Eval 1 is ${maxSlotsEval1}. Deselect a team first.`, 'err');
+                    return prev;
+                }
+                next.add(id);
+            }
+            return next;
+        });
     };
 
-    const evaluatePhase2 = async () => {
-        const results = phase2Data.filter(u => u.result !== null)
-            .map(u => ({ userId: u.id, result: u.result as 'WINNER' | 'LOSER' }));
-        setEvaluating(true);
+    const publishEval1 = async () => {
+        if (selectedTeams.size === 0) { notify('Select at least one team', 'err'); return; }
+        setPublishing(true);
+        try {
+            await apiEvaluatePhase1(Array.from(selectedTeams));
+            notify(`✓ Eval 1 published — ${selectedTeams.size} teams selected`);
+            load();
+        } catch (e: unknown) { notify((e as Error).message ?? 'Failed to publish', 'err'); }
+        setPublishing(false);
+    };
+
+    // ── Eval 2 handlers ───────────────────────────────────────────────────────
+    const toggleUser = (id: string) => {
+        setSelectedUsers(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) {
+                next.delete(id);
+            } else {
+                if (maxSlotsEval2 > 0 && next.size >= maxSlotsEval2) {
+                    notify(`Max slots for Eval 2 is ${maxSlotsEval2}. Deselect a user first.`, 'err');
+                    return prev;
+                }
+                next.add(id);
+            }
+            return next;
+        });
+    };
+
+    const toggleExpand = (id: string) => {
+        setExpandedTeams(prev => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
+    };
+
+    const publishEval2 = async () => {
+        if (selectedUsers.size === 0) { notify('Select at least one participant', 'err'); return; }
+        const allMembers = passedTeams.flatMap(t => t.members ?? []);
+        const results = allMembers.map(m => ({
+            userId: m.id,
+            result: (selectedUsers.has(m.id) ? 'WINNER' : 'LOSER') as 'WINNER' | 'LOSER',
+        }));
+        setPublishing(true);
         try {
             await apiEvaluatePhase2(results);
-            notify(`✓ Phase 2 published — ${results.length} users evaluated`);
-        } catch { notify('Failed to publish Phase 2', 'err'); }
-        setEvaluating(false);
+            notify(`✓ Eval 2 published — ${selectedUsers.size} individuals selected`);
+            load();
+        } catch (e: unknown) { notify((e as Error).message ?? 'Failed to publish', 'err'); }
+        setPublishing(false);
     };
 
-    const winners1 = phase1Data.filter(t => t.result === 'WINNER');
-    const winners2 = phase2Data.filter(u => u.result === 'WINNER');
+    // ── Total participants across passed teams ────────────────────────────────
+    const totalEval2Participants = passedTeams.reduce((s, t) => s + (t.members?.length ?? 0), 0);
 
     return (
         <div>
             {/* Header */}
             <div className="page-header">
                 <div>
-                    <h1 className="page-title">Results Management</h1>
-                    <p className="page-subtitle">View and publish evaluation results for each phase</p>
+                    <h1 className="page-title">Evaluation</h1>
+                    <p className="page-subtitle">Select winners for each evaluation round</p>
                 </div>
                 <button onClick={load} disabled={loading} className="btn btn-ghost">
                     <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -96,138 +242,275 @@ export default function ResultsPage() {
                 </div>
             )}
 
-            {/* Phase Tabs */}
+            {/* Tab switcher */}
             <div className="flex gap-2 mb-6 p-1 bg-white/[0.03] border border-white/[0.07] rounded-xl w-fit">
-                {(['1', '2'] as Phase[]).map(p => (
-                    <button key={p} onClick={() => setPhase(p)}
-                        className={`px-5 py-2 rounded-lg font-black text-xs tracking-widest uppercase transition-all
-                            ${phase === p
+                {(['eval1', 'eval2'] as Tab[]).map(t => (
+                    <button
+                        key={t}
+                        onClick={() => setTab(t)}
+                        className={`px-6 py-2 rounded-lg font-black text-xs tracking-widest uppercase transition-all
+                            ${tab === t
                                 ? 'bg-[#53389e] text-white shadow-[0_0_12px_rgba(83,56,158,0.4)]'
-                                : 'text-[#475569] hover:text-white'}`}>
-                        Phase {p}
+                                : 'text-[#475569] hover:text-white'}`}
+                    >
+                        {t === 'eval1' ? 'Evaluation 1' : 'Evaluation 2'}
                     </button>
                 ))}
             </div>
 
             {loading ? (
-                <div className="flex items-center justify-center h-48">
+                <div className="flex items-center justify-center h-60">
                     <Loader2 className="w-8 h-8 animate-spin text-[#53389e]" />
                 </div>
-            ) : phase === '1' ? (
-                <>
-                    {/* Phase 1 Stats */}
-                    <div className="grid grid-cols-2 gap-4 mb-5">
-                        <div className="card flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-[#f59e0b]/15 border border-[#f59e0b]/30 flex items-center justify-center shrink-0">
-                                <Trophy className="w-6 h-6 text-[#f59e0b]" />
-                            </div>
-                            <div>
-                                <p className="text-[9px] text-[#475569] uppercase tracking-widest font-bold mb-1">Winners</p>
-                                <p className="text-3xl font-black text-[#10b981]">{winners1.length}</p>
-                            </div>
-                        </div>
-                        <div className="card flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-[#53389e]/15 border border-[#53389e]/30 flex items-center justify-center shrink-0">
-                                <Users className="w-6 h-6 text-[#a855f7]" />
-                            </div>
-                            <div>
-                                <p className="text-[9px] text-[#475569] uppercase tracking-widest font-bold mb-1">Total Teams</p>
-                                <p className="text-3xl font-black text-white">{phase1Data.length}</p>
+            ) : tab === 'eval1' ? (
+                /* ═══════════════════ EVAL 1 ═══════════════════ */
+                <div className="space-y-5">
+                    {/* Slot counter card */}
+                    <div className="card">
+                        <div className="card-header">
+                            <div className="card-icon"><Trophy className="w-4 h-4 text-[#f59e0b]" /></div>
+                            <div className="flex-1">
+                                <p className="card-title">Team Selection — Evaluation 1</p>
+                                <p className="text-[10px] text-[#475569] mt-0.5">
+                                    Select which teams advance. Cannot exceed the max slot limit.
+                                </p>
                             </div>
                         </div>
+                        <SlotBar selected={selectedTeams.size} max={maxSlotsEval1} color="#f59e0b" />
+                        {maxSlotsEval1 === 0 && (
+                            <p className="text-[10px] text-[#f59e0b]/70 mt-2 flex items-center gap-1.5">
+                                <TriangleAlert className="w-3 h-3" />
+                                Max slots not configured. Set it in Settings first.
+                            </p>
+                        )}
                     </div>
 
-                    <div className="flex justify-end mb-4">
-                        <button onClick={evaluatePhase1} disabled={evaluating || phase1Data.length === 0} className="btn btn-primary">
-                            {evaluating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-                            {evaluating ? 'Publishing…' : 'Publish Phase 1 Results'}
+                    {/* Teams table */}
+                    {teams.length === 0 ? (
+                        <div className="card text-center py-16">
+                            <Users className="w-10 h-10 mx-auto mb-4 text-[#334155]" />
+                            <p className="text-sm font-bold text-[#475569] tracking-widest uppercase">No teams registered</p>
+                        </div>
+                    ) : (
+                        <div className="card p-0 overflow-hidden">
+                            <div className="px-5 py-3.5 border-b border-white/[0.05] bg-white/[0.02] flex items-center justify-between">
+                                <span className="text-[10px] font-black tracking-[0.2em] uppercase text-white flex items-center gap-2">
+                                    <Users className="w-3.5 h-3.5 text-[#a855f7]" />
+                                    All Teams
+                                </span>
+                                <span className="badge badge-dim">{teams.length} team{teams.length !== 1 ? 's' : ''}</span>
+                            </div>
+                            <div className="divide-y divide-white/[0.04]">
+                                {teams.map(team => {
+                                    const checked = selectedTeams.has(team.id);
+                                    const canCheck = !checked && maxSlotsEval1 > 0 && selectedTeams.size >= maxSlotsEval1;
+                                    return (
+                                        <div
+                                            key={team.id}
+                                            onClick={() => { if (!canCheck) toggleTeam(team.id); }}
+                                            className={`flex items-center gap-4 px-5 py-3.5 cursor-pointer transition-colors
+                                                ${checked ? 'bg-[#f59e0b]/05' : 'hover:bg-white/[0.025]'}
+                                                ${canCheck ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                        >
+                                            {/* Checkbox */}
+                                            <div
+                                                className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all cursor-pointer
+                                                    ${checked
+                                                        ? 'bg-[#f59e0b] border-[#f59e0b]'
+                                                        : 'border-white/20 hover:border-[#f59e0b]/50'}`}
+                                            >
+                                                {checked && <CheckCircle className="w-3.5 h-3.5 text-black" />}
+                                            </div>
+
+                                            {/* Team info */}
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-bold text-white truncate">{team.name}</p>
+                                                <p className="text-[9px] text-[#334155] font-mono mt-0.5">{team.id.slice(0, 12)}…</p>
+                                            </div>
+
+                                            {/* Member count */}
+                                            <div className="flex items-center gap-1.5 shrink-0">
+                                                <User className="w-3 h-3 text-[#475569]" />
+                                                <span className="text-xs text-[#94a3b8] font-mono">{team._count?.members ?? 0} members</span>
+                                            </div>
+
+                                            {/* Status badge */}
+                                            {checked ? (
+                                                <span className="badge badge-gold shrink-0">Selected</span>
+                                            ) : team.phase1Pass ? (
+                                                <span className="badge badge-green shrink-0">Previously Passed</span>
+                                            ) : (
+                                                <span className="badge badge-dim shrink-0">Not Selected</span>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Publish button */}
+                    <div className="flex justify-end">
+                        <button
+                            onClick={publishEval1}
+                            disabled={publishing || selectedTeams.size === 0}
+                            className="btn btn-primary"
+                        >
+                            {publishing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+                            {publishing ? 'Publishing…' : `Publish Eval 1 — ${selectedTeams.size} Teams`}
                         </button>
                     </div>
-
-                    <div className="data-table-wrap">
-                        <table className="data-table">
-                            <thead>
-                                <tr>{['Team', 'Members', 'Phase 1', 'Override', 'Result'].map(h => <th key={h}>{h}</th>)}</tr>
-                            </thead>
-                            <tbody>
-                                {phase1Data.map(team => (
-                                    <tr key={team.id}>
-                                        <td className="font-bold text-white">{team.name}</td>
-                                        <td><span className="font-mono text-[#94a3b8]">{team.memberCount}</span></td>
-                                        <td>
-                                            <span className={`badge ${team.phase1Pass ? 'badge-green' : 'badge-dim'}`}>
-                                                {team.phase1Pass ? 'Passed' : 'Pending'}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            {team.resultOverride
-                                                ? <span className="badge badge-gold">{team.resultOverride}</span>
-                                                : <span className="text-[#334155] text-xs font-bold">Auto</span>}
-                                        </td>
-                                        <td>
-                                            <span className={`badge ${team.result === 'WINNER' ? 'badge-green' : 'badge-red'}`}>
-                                                {team.result}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </>
+                </div>
             ) : (
-                <>
-                    {/* Phase 2 Stats */}
-                    <div className="grid grid-cols-2 gap-4 mb-5">
-                        <div className="card flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-[#f59e0b]/15 border border-[#f59e0b]/30 flex items-center justify-center shrink-0">
-                                <Trophy className="w-6 h-6 text-[#f59e0b]" />
-                            </div>
-                            <div>
-                                <p className="text-[9px] text-[#475569] uppercase tracking-widest font-bold mb-1">Top Performers</p>
-                                <p className="text-3xl font-black text-[#10b981]">{winners2.length}</p>
-                            </div>
-                        </div>
-                        <div className="card flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-[#53389e]/15 border border-[#53389e]/30 flex items-center justify-center shrink-0">
-                                <User className="w-6 h-6 text-[#a855f7]" />
-                            </div>
-                            <div>
-                                <p className="text-[9px] text-[#475569] uppercase tracking-widest font-bold mb-1">Total Users</p>
-                                <p className="text-3xl font-black text-white">{phase2Data.length}</p>
+                /* ═══════════════════ EVAL 2 ═══════════════════ */
+                <div className="space-y-5">
+                    {/* Slot counter card */}
+                    <div className="card">
+                        <div className="card-header">
+                            <div className="card-icon"><Trophy className="w-4 h-4 text-[#10b981]" /></div>
+                            <div className="flex-1">
+                                <p className="card-title">Individual Selection — Evaluation 2</p>
+                                <p className="text-[10px] text-[#475569] mt-0.5">
+                                    Select individual participants from Eval 1 teams. Cannot exceed the max slot limit.
+                                </p>
                             </div>
                         </div>
+                        <SlotBar selected={selectedUsers.size} max={maxSlotsEval2} color="#10b981" />
+                        {maxSlotsEval2 === 0 && (
+                            <p className="text-[10px] text-[#10b981]/70 mt-2 flex items-center gap-1.5">
+                                <TriangleAlert className="w-3 h-3" />
+                                Max slots for Eval 2 not configured. Set it in Settings first.
+                            </p>
+                        )}
                     </div>
 
-                    <div className="flex justify-end mb-4">
-                        <button onClick={evaluatePhase2} disabled={evaluating || phase2Data.length === 0} className="btn btn-primary">
-                            {evaluating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-                            {evaluating ? 'Publishing…' : 'Publish Phase 2 Results'}
+                    {/* Info if no passed teams yet */}
+                    {passedTeams.length === 0 ? (
+                        <div className="card text-center py-16">
+                            <Trophy className="w-10 h-10 mx-auto mb-4 text-[#334155]" />
+                            <p className="text-sm font-bold text-[#475569] tracking-widest uppercase">No Eval 1 teams published yet</p>
+                            <p className="text-xs text-[#334155] mt-2">Publish Eval 1 first to see participants here.</p>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="flex items-center justify-between">
+                                <p className="text-[9px] font-black tracking-widest text-[#334155] uppercase">
+                                    {totalEval2Participants} participants across {passedTeams.length} teams
+                                </p>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setExpandedTeams(new Set(passedTeams.map(t => t.id)))}
+                                        className="text-[10px] text-[#475569] hover:text-white transition-colors font-bold"
+                                    >
+                                        Expand All
+                                    </button>
+                                    <span className="text-[#334155]">·</span>
+                                    <button
+                                        onClick={() => setExpandedTeams(new Set())}
+                                        className="text-[10px] text-[#475569] hover:text-white transition-colors font-bold"
+                                    >
+                                        Collapse All
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Teams accordion */}
+                            <div className="space-y-3">
+                                {passedTeams.map(team => {
+                                    const members = team.members ?? [];
+                                    const teamSelected = members.filter(m => selectedUsers.has(m.id)).length;
+                                    const expanded = expandedTeams.has(team.id);
+
+                                    return (
+                                        <div
+                                            key={team.id}
+                                            className="card p-0 overflow-hidden"
+                                            style={{ borderColor: teamSelected > 0 ? 'rgba(16,185,129,0.2)' : undefined }}
+                                        >
+                                            {/* Team header */}
+                                            <button
+                                                onClick={() => toggleExpand(team.id)}
+                                                className="w-full flex items-center gap-4 px-5 py-3.5 hover:bg-white/[0.025] transition-colors text-left"
+                                            >
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-bold text-white">{team.name}</p>
+                                                    <p className="text-[9px] text-[#334155] mt-0.5">
+                                                        {members.length} member{members.length !== 1 ? 's' : ''}
+                                                        {teamSelected > 0 && (
+                                                            <span className="text-[#10b981] ml-2">· {teamSelected} selected</span>
+                                                        )}
+                                                    </p>
+                                                </div>
+                                                <span className={`text-[10px] font-black tracking-wider transition-transform ${expanded ? 'rotate-90' : ''} text-[#475569]`}>›</span>
+                                            </button>
+
+                                            {/* Members list */}
+                                            {expanded && (
+                                                <div className="border-t border-white/[0.05] divide-y divide-white/[0.04]">
+                                                    {members.length === 0 ? (
+                                                        <p className="px-5 py-4 text-xs text-[#334155] italic">No members in this team</p>
+                                                    ) : members.map(member => {
+                                                        const checked = selectedUsers.has(member.id);
+                                                        const canCheck = !checked && maxSlotsEval2 > 0 && selectedUsers.size >= maxSlotsEval2;
+                                                        return (
+                                                            <div
+                                                                key={member.id}
+                                                                onClick={() => toggleUser(member.id)}
+                                                                className={`flex items-center gap-4 px-6 py-3 transition-colors
+                                                                    ${checked ? 'bg-[#10b981]/05' : 'hover:bg-white/[0.025]'}
+                                                                    ${canCheck ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
+                                                            >
+                                                                {/* Checkbox */}
+                                                                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all
+                                                                    ${checked
+                                                                        ? 'bg-[#10b981] border-[#10b981]'
+                                                                        : 'border-white/20 hover:border-[#10b981]/50'}`}>
+                                                                    {checked && <CheckCircle className="w-3.5 h-3.5 text-black" />}
+                                                                </div>
+
+                                                                {/* Avatar */}
+                                                                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#53389e]/50 to-[#a855f7]/30 flex items-center justify-center text-xs font-black text-white shrink-0">
+                                                                    {member.email[0].toUpperCase()}
+                                                                </div>
+
+                                                                {/* Email */}
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-xs font-medium text-[#e2e8f0] truncate">{member.email}</p>
+                                                                    <p className="text-[9px] text-[#334155]">{member.role}</p>
+                                                                </div>
+
+                                                                {/* Status */}
+                                                                {checked ? (
+                                                                    <span className="badge badge-green shrink-0">Selected</span>
+                                                                ) : member.result === 'WINNER' ? (
+                                                                    <span className="badge badge-green shrink-0">Previously Won</span>
+                                                                ) : (
+                                                                    <span className="badge badge-dim shrink-0">Not Selected</span>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </>
+                    )}
+
+                    {/* Publish button */}
+                    <div className="flex justify-end">
+                        <button
+                            onClick={publishEval2}
+                            disabled={publishing || selectedUsers.size === 0 || passedTeams.length === 0}
+                            className="btn btn-primary"
+                        >
+                            {publishing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+                            {publishing ? 'Publishing…' : `Publish Eval 2 — ${selectedUsers.size} Individuals`}
                         </button>
                     </div>
-
-                    <div className="data-table-wrap">
-                        <table className="data-table">
-                            <thead>
-                                <tr>{['Email', 'Team', 'Role', 'Result'].map(h => <th key={h}>{h}</th>)}</tr>
-                            </thead>
-                            <tbody>
-                                {phase2Data.map(u => (
-                                    <tr key={u.id}>
-                                        <td className="text-white font-medium">{u.email}</td>
-                                        <td className="text-[#94a3b8]">{u.team.name}</td>
-                                        <td><span className="badge badge-violet">{u.role}</span></td>
-                                        <td>
-                                            <span className={`badge ${u.result === 'WINNER' ? 'badge-green' : u.result === 'LOSER' ? 'badge-red' : 'badge-dim'}`}>
-                                                {u.result ?? 'Pending'}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </>
+                </div>
             )}
         </div>
     );

@@ -9,6 +9,7 @@ export async function getPhase1Results(_req: Request, res: Response): Promise<vo
         const maxSlots = await getConfigNumber('max_slots');
 
         const teams = await prisma.team.findMany({
+            where: { isAdminTeam: false },
             select: {
                 id: true,
                 name: true,
@@ -57,6 +58,7 @@ export async function getPhase2Results(_req: Request, res: Response): Promise<vo
         const threshold = await getConfigNumber('phase2_score_threshold');
 
         const users = await prisma.user.findMany({
+            where: { role: 'PARTICIPANT' },  // ← exclude any legacy ADMIN-role users
             select: {
                 id: true,
                 email: true,

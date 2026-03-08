@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { apiGetDashboard, apiGetAllConfig } from '@/lib/api';
-import { getSocket } from '@/lib/socket';
-import { Users, Trophy, Database, Activity, RefreshCw, Zap } from 'lucide-react';
+import {
+    Users, Trophy, User, RefreshCw, UserPlus, Settings, ChevronRight
+} from 'lucide-react';
 
 interface Stats {
     totalTeams: number;
@@ -12,8 +14,8 @@ interface Stats {
     phase2Winners: number;
 }
 
-function StatCard({ label, value, icon: Icon, color, glow }: {
-    label: string; value: number | string; icon: React.ElementType; color: string; glow: string;
+function StatCard({ label, value, icon: Icon, glow, sub }: {
+    label: string; value: number | string; icon: React.ElementType; glow: string; sub?: string;
 }) {
     return (
         <div className="stat-card" style={{ borderColor: `${glow}30`, boxShadow: `0 0 24px ${glow}14` }}>
@@ -23,6 +25,7 @@ function StatCard({ label, value, icon: Icon, color, glow }: {
                 <div>
                     <p className="text-[10px] font-black tracking-[0.2em] uppercase mb-2.5" style={{ color: `${glow}99` }}>{label}</p>
                     <p className="text-4xl font-black font-mono text-white">{typeof value === 'number' ? value : '—'}</p>
+                    {sub && <p className="text-[10px] text-[#334155] mt-1.5">{sub}</p>}
                 </div>
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center border shrink-0"
                     style={{ background: `${glow}18`, borderColor: `${glow}40` }}>
@@ -33,11 +36,18 @@ function StatCard({ label, value, icon: Icon, color, glow }: {
     );
 }
 
+const quickLinks = [
+    { href: '/dashboard/users', label: 'Admin Management', desc: 'Add or remove admin accounts', icon: UserPlus, glow: '#6366f1' },
+    { href: '/dashboard/results', label: 'Evaluation', desc: 'Select winners for Eval 1 & 2', icon: Trophy, glow: '#f59e0b' },
+    { href: '/dashboard/timers', label: 'Settings', desc: 'Set timers and max slot counts', icon: Settings, glow: '#06b6d4' },
+] as const;
+
 export default function OverviewPage() {
     const [stats, setStats] = useState<Stats | null>(null);
     const [config, setConfig] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+    const router = useRouter();
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -52,18 +62,10 @@ export default function OverviewPage() {
         setLoading(false);
     }, []);
 
-    useEffect(() => {
-        load();
-        const socket = getSocket();
-        socket.connect();
-        socket.on('config:updated', () => load());
-        socket.on('config:batch-updated', () => load());
-        return () => { socket.off('config:updated'); socket.off('config:batch-updated'); socket.disconnect(); };
-    }, [load]);
+    useEffect(() => { load(); }, [load]);
 
-    const currentPhase = config['current_phase'] ?? '—';
-    const regOpen = config['registration_open'] === 'true';
-    const resultsLocked = config['results_locked'] === 'true';
+    const maxSlotsEval1 = config['max_slots'] ?? '—';
+    const maxSlotsEval2 = config['max_slots_eval2'] ?? '—';
 
     return (
         <div>
@@ -72,7 +74,7 @@ export default function OverviewPage() {
                 <div>
                     <h1 className="page-title">System Overview</h1>
                     <p className="page-subtitle">
-                        {lastUpdated ? `Last refreshed: ${lastUpdated.toLocaleTimeString()}` : 'Loading data…'}
+                        {lastUpdated ? `Last refreshed: ${lastUpdated.toLocaleTimeString()}` : 'Loading…'}
                     </p>
                 </div>
                 <button onClick={load} disabled={loading} className="btn btn-ghost">
@@ -81,51 +83,48 @@ export default function OverviewPage() {
                 </button>
             </div>
 
-            {/* Status Pills */}
-            <div className="flex items-center gap-2.5 mb-7 flex-wrap">
-                <span className={`badge ${regOpen ? 'badge-green' : 'badge-red'}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${regOpen ? 'bg-[#10b981]' : 'bg-red-400'} animate-pulse`} />
-                    Registration {regOpen ? 'Open' : 'Closed'}
-                </span>
-                <span className={`badge ${resultsLocked ? 'badge-red' : 'badge-green'}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${resultsLocked ? 'bg-red-400' : 'bg-[#10b981]'} animate-pulse`} />
-                    Results {resultsLocked ? 'Locked' : 'Released'}
-                </span>
-                <span className="badge badge-violet">
-                    <Zap className="w-2.5 h-2.5 mr-1" />
-                    Phase {currentPhase} Active
-                </span>
-            </div>
-
             {/* Stats Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
-                <StatCard label="Total Teams" value={stats?.totalTeams ?? '—'} icon={Users} glow="#7c3aed" color="" />
-                <StatCard label="Total Users" value={stats?.totalUsers ?? '—'} icon={Database} glow="#a855f7" color="" />
-                <StatCard label="Phase 1 Winners" value={stats?.phase1Winners ?? '—'} icon={Trophy} glow="#f59e0b" color="" />
-                <StatCard label="Phase 2 Winners" value={stats?.phase2Winners ?? '—'} icon={Activity} glow="#10b981" color="" />
+                <StatCard label="Total Teams" value={stats?.totalTeams ?? '—'} icon={Users} glow="#7c3aed" />
+                <StatCard label="Participants" value={stats?.totalUsers ?? '—'} icon={User} glow="#a855f7" />
+                <StatCard
+                    label="Eval 1 Selections"
+                    value={stats?.phase1Winners ?? '—'}
+                    icon={Trophy}
+                    glow="#f59e0b"
+                    sub={`Max slots: ${maxSlotsEval1}`}
+                />
+                <StatCard
+                    label="Eval 2 Selections"
+                    value={stats?.phase2Winners ?? '—'}
+                    icon={Trophy}
+                    glow="#10b981"
+                    sub={`Max slots: ${maxSlotsEval2}`}
+                />
             </div>
 
-            {/* Config Snapshot */}
-            <div className="card">
-                <div className="card-header">
-                    <div className="card-icon"><Database className="w-4 h-4 text-[#a855f7]" /></div>
-                    <span className="card-title">Live Config Snapshot</span>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {[
-                        { key: 'phase1_timer_seconds', label: 'Phase 1 Timer' },
-                        { key: 'phase2_timer_seconds', label: 'Phase 2 Timer' },
-                        { key: 'max_slots', label: 'Max Slots' },
-                        { key: 'announcement_interval', label: 'Announce Interval' },
-                        { key: 'phase2_score_threshold', label: 'Score Threshold' },
-                        { key: 'current_phase', label: 'Current Phase' },
-                        { key: 'registration_open', label: 'Registration' },
-                        { key: 'results_locked', label: 'Results Lock' },
-                    ].map(({ key, label }) => (
-                        <div key={key} className="bg-black/25 border border-white/[0.06] rounded-xl p-3.5">
-                            <p className="text-[9px] text-[#475569] font-bold tracking-widest uppercase mb-1.5">{label}</p>
-                            <p className="text-sm font-black text-[#a855f7] font-mono">{config[key] ?? '—'}</p>
-                        </div>
+            {/* Quick Access */}
+            <div>
+                <p className="text-[9px] font-black tracking-[0.22em] text-[#334155] uppercase mb-3">Quick Access</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {quickLinks.map(({ href, label, desc, icon: Icon, glow }) => (
+                        <button
+                            key={href}
+                            onClick={() => router.push(href)}
+                            className="group text-left p-5 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/[0.12] transition-all duration-150 relative overflow-hidden"
+                        >
+                            <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl opacity-0 group-hover:opacity-10 transition-opacity"
+                                style={{ background: glow }} />
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="w-9 h-9 rounded-lg flex items-center justify-center border shrink-0"
+                                    style={{ background: `${glow}18`, borderColor: `${glow}35` }}>
+                                    <Icon className="w-4 h-4" style={{ color: glow }} strokeWidth={2} />
+                                </div>
+                                <ChevronRight className="w-3.5 h-3.5 text-[#334155] group-hover:text-[#64748b] transition-colors mt-0.5" />
+                            </div>
+                            <p className="text-[0.78rem] font-bold text-[#e2e8f0] tracking-wide mb-1">{label}</p>
+                            <p className="text-[10px] text-[#475569] leading-relaxed">{desc}</p>
+                        </button>
                     ))}
                 </div>
             </div>

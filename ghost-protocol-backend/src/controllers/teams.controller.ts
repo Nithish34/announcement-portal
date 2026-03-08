@@ -5,12 +5,14 @@ import { prisma } from '../services/prisma.service';
 export async function getAllTeams(_req: Request, res: Response): Promise<void> {
     try {
         const teams = await prisma.team.findMany({
+            where: { isAdminTeam: false },
             select: {
                 id: true,
                 name: true,
                 repoUrl: true,
                 phase1Pass: true,
                 phase2Pass: true,
+                resultOverride: true,
                 createdAt: true,
                 _count: {
                     select: { members: true },

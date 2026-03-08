@@ -68,34 +68,18 @@ export interface TeamRow {
     phase2Pass: boolean;
     resultOverride: 'WINNER' | 'LOSER' | null;
     _count?: { members: number };
-    members?: { id: string; email: string; result: string | null }[];
+    members?: { id: string; email: string; role: string; result: string | null }[];
 }
 
 export const apiGetAllTeams = () => apiFetch<TeamRow[]>('/teams');
+
+export const apiGetTeamById = (id: string) => apiFetch<TeamRow>(`/teams/${id}`);
 
 export const apiCreateTeam = (name: string, repoUrl?: string) =>
     apiFetch('/teams', {
         method: 'POST',
         body: JSON.stringify({ name, repoUrl }),
     });
-
-export const apiUpdateTeam = (id: string, data: Partial<TeamRow>) =>
-    apiFetch(`/teams/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(data),
-    });
-
-export const apiGetTeamMembers = (id: string) =>
-    apiFetch(`/teams/${id}/members`);
-
-export const apiSetTeamOverride = (teamId: string, override: 'WINNER' | 'LOSER') =>
-    apiFetch(`/admin/teams/${teamId}/override`, {
-        method: 'PATCH',
-        body: JSON.stringify({ override }),
-    });
-
-export const apiClearTeamOverride = (teamId: string) =>
-    apiFetch(`/admin/teams/${teamId}/override`, { method: 'DELETE' });
 
 // ── Results ───────────────────────────────────────────────────────────────────
 export const apiGetPhase1Results = () => apiFetch('/results/phase1');
@@ -127,19 +111,22 @@ export const apiGetDashboard = () =>
 // ── Admin actions ────────────────────────────────────────────────────────────
 export const apiResetPortal = () => apiFetch('/admin/reset', { method: 'POST' });
 
-export const apiBroadcast = (event: string, payload?: object) =>
-    apiFetch('/admin/broadcast', {
-        method: 'POST',
-        body: JSON.stringify({ event, payload }),
-    });
+// ── Admin Management ──────────────────────────────────────────────────────────
+export interface AdminRow {
+    id: string;
+    email: string;
+    name: string;
+    createdAt: string;
+    createdById: string | null;
+}
 
-export const apiSetEvaluationResult = (payload: {
-    entityType: 'team' | 'user';
-    entityId: string;
-    field: string;
-    value: unknown;
-}) =>
-    apiFetch('/admin/results', {
+export const apiListAdmins = () => apiFetch<AdminRow[]>('/admin/admins');
+
+export const apiAddAdmin = (payload: { email: string; password: string; name?: string }) =>
+    apiFetch<AdminRow>('/admin/admins', {
         method: 'POST',
         body: JSON.stringify(payload),
     });
+
+export const apiRemoveAdmin = (adminId: string) =>
+    apiFetch(`/admin/admins/${adminId}`, { method: 'DELETE' });

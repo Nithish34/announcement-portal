@@ -21,6 +21,7 @@ interface TeamData {
 export default function Results() {
   const [teams, setTeams] = useState<TeamData[]>([]);
   const [maxSlots, setMaxSlots] = useState(20);
+  const [announcementInterval, setAnnouncementInterval] = useState(30); // seconds per winner, loaded from config
   const [showShutter, setShowShutter] = useState(true);
   const [showContent, setShowContent] = useState(false);
   const [visibleTeams, setVisibleTeams] = useState<TeamData[]>([]);
@@ -73,10 +74,13 @@ export default function Results() {
       }
     };
 
-    // Fetch max_slots for display (non-authenticated, use public endpoint)
+    // Fetch config — announcement_interval and max_slots
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/config/timers`)
       .then(r => r.json())
-      .then(data => { if (data.announcement_interval) return; }) // just ping
+      .then(data => {
+        if (data.announcement_interval) setAnnouncementInterval(Number(data.announcement_interval));
+        if (data.max_slots) setMaxSlots(Number(data.max_slots));
+      })
       .catch(() => null);
 
     loadResults();
@@ -128,14 +132,15 @@ export default function Results() {
       for (let i = 0; i < winners.length; i++) {
         const winner = winners[i];
 
-        setTimeLeft(30);
+        setTimeLeft(announcementInterval);
 
-        await new Promise(r => setTimeout(r, 1000));
+        // Wait the full interval BEFORE showing the result (suspense)
+        await new Promise(r => setTimeout(r, announcementInterval * 1000));
         if (unmounted) return;
 
         setCurrentWinner(winner);
 
-        // Big Popup Time
+        // Show the winner popup for 5s
         await new Promise(r => setTimeout(r, 5000));
         if (unmounted) return;
 
@@ -147,10 +152,6 @@ export default function Results() {
         if (userTeamRef.current?.id === winner.id) {
           setIsUnlocked(true);
         }
-
-        // Wait the remaining 24s from the 30s cycle
-        await new Promise(r => setTimeout(r, 24000));
-        if (unmounted) return;
       }
 
       setTimeLeft(null);
@@ -172,8 +173,7 @@ export default function Results() {
       hasRunSequence.current = false;
     };
     // Only depend on teams and isLoading — user-derived values use refs above
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teams, isLoading]);
+  }, [teams, isLoading, announcementInterval]);
 
   const handleNext = () => {
     if (!isUnlocked) return;
@@ -303,7 +303,7 @@ export default function Results() {
                         strokeLinecap="round"
                         fill="none"
                         strokeDasharray="289.02"
-                        strokeDashoffset={timeLeft !== null ? 289.02 - (timeLeft / 30) * 289.02 : 0}
+                        strokeDashoffset={timeLeft !== null ? 289.02 - (timeLeft / announcementInterval) * 289.02 : 0}
                         className="transition-all duration-1000 ease-linear"
                       />
                     </svg>

@@ -16,7 +16,6 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  setWorkflowState: (teamId: string, result: 'WINNER' | 'LOSER') => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -80,18 +79,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
-  // ── Workflow helper (for /workflow test page) ─────────────────────────────
-  const setWorkflowState = (teamId: string, result: 'WINNER' | 'LOSER') => {
-    setUser((prev) => {
-      if (!prev) return null;
-      const updated = { ...prev, teamId, result };
-      sessionStorage.setItem(SESSION_USER_KEY, JSON.stringify(updated));
-      return updated;
-    });
-  };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, setWorkflowState }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
