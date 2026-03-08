@@ -6,8 +6,7 @@ services:
     plan: free
     rootDir: ghost-protocol-backend
     buildCommand: npm install && npm run db:generate && npm run build
-    preDeployCommand: npx prisma migrate deploy
-    startCommand: npm run start
+    startCommand: npx prisma migrate deploy && npm run start
     envVars:
       - key: NODE_ENV
         value: production
@@ -49,6 +48,7 @@ services:
   - type: redis
     name: ghost-protocol-redis
     plan: free
+    ipAllowList: []
 
 databases:
   # The PostgreSQL database
