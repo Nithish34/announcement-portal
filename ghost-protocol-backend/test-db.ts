@@ -1,0 +1,1 @@
+import { prisma } from './src/services/prisma.service'; async function main() { const admins = await prisma.admin.findMany(); console.log('Admins:', admins); const users = await prisma.user.findMany({ include: { team: true }}); console.log('Users:', users); } main().finally(() => process.exit(0));

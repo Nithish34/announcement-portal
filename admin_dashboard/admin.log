@@ -1,0 +1,22 @@
+
+> admin_dashboard@0.1.0 dev
+> next dev --port 3001
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3001
+- Network:       http://192.168.179.82:3001
+- Environments: .env.local
+
+✓ Starting...
+✓ Ready in 5s
+○ Compiling /dashboard ...
+ GET /dashboard 200 in 5.8s (compile: 5.1s, render: 636ms)
+ GET / 307 in 1229ms (compile: 675ms, render: 554ms)
+ GET /login 200 in 391ms (compile: 86ms, render: 306ms)
+ GET /login 200 in 585ms (compile: 63ms, render: 522ms)
+ GET /login 200 in 627ms (compile: 26ms, render: 601ms)
+ GET /dashboard 200 in 197ms (compile: 60ms, render: 137ms)
+ GET /dashboard/users 200 in 1771ms (compile: 1639ms, render: 131ms)
+ GET /dashboard/results 200 in 1796ms (compile: 1628ms, render: 167ms)
+ GET /dashboard/results 200 in 39ms (compile: 13ms, render: 27ms)
+ GET /dashboard/timers 200 in 423ms (compile: 361ms, render: 62ms)

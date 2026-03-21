@@ -1,0 +1,1 @@
+import { prisma } from './src/services/prisma.service'; import bcrypt from 'bcryptjs'; async function main() { const hash = await bcrypt.hash('password123', 12); await prisma.user.update({ where: { email: 'alpha1@eduspine.com' }, data: { password: hash } }); console.log('Alpha1 password updated'); } main().finally(() => process.exit(0));
