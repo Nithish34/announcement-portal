@@ -114,6 +114,18 @@ export async function evaluatePhase1(req: Request, res: Response): Promise<void>
     }
 
     try {
+        if (passingTeamIds.length > 0) {
+            const existingTeams = await prisma.team.findMany({
+                where: { id: { in: passingTeamIds } },
+                select: { id: true },
+            });
+
+            if (existingTeams.length !== passingTeamIds.length) {
+                res.status(400).json({ error: 'One or more team IDs provided do not exist' });
+                return;
+            }
+        }
+
         await prisma.$transaction([
             prisma.team.updateMany({
                 where: { id: { in: passingTeamIds } },

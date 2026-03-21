@@ -192,7 +192,7 @@ export default function Results() {
 
   return (
     <>
-      <div className="min-h-screen relative overflow-hidden bg-[#050508]">
+      <div className="min-h-screen relative overflow-hidden bg-black-true">
         <DynamicBackground />
 
         <AnimatePresence>
@@ -225,7 +225,7 @@ export default function Results() {
               transition={{ type: "spring", duration: 0.8, bounce: 0.4 }}
               className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md"
             >
-              <div className="bg-gradient-to-br from-[#111] to-[#000] border-4 border-[#ffd700] rounded-3xl p-8 lg:p-12 text-center shadow-[0_0_100px_rgba(255,215,0,0.6)] max-w-2xl w-[80%] mx-auto relative overflow-hidden">
+              <div className="bg-gradient-to-br from-[#111] to-[#000] border-gold-glow rounded-3xl p-8 lg:p-12 text-center max-w-2xl w-[80%] mx-auto relative overflow-hidden">
                 <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-white to-transparent opacity-50" />
                 <Trophy className="w-20 h-20 md:w-32 md:h-32 text-[#ffd700] mx-auto mb-6 drop-shadow-[0_0_20px_rgba(255,215,0,1)]" />
                 <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#ffd700] to-white drop-shadow-xl mb-4 uppercase tracking-wider">
@@ -252,11 +252,11 @@ export default function Results() {
                 transition={{ delay: 0.1 }}
                 className="text-center mb-6"
               >
-                <Trophy className="w-12 h-12 md:w-16 md:h-16 text-[#53389e] mx-auto mb-3 drop-shadow-[0_0_15px_rgba(83,56,158,0.8)]" />
+                <Trophy className="w-12 h-12 md:w-16 md:h-16 text-neon-violet mx-auto mb-3 drop-shadow-neon-violet" />
                 <h1 className="text-2xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-[#53389e] mb-1 drop-shadow-lg tracking-widest uppercase">
                   OPERATIVE COMMAND
                 </h1>
-                <p className="text-[#a855f7] text-[10px] md:text-xs font-semibold tracking-wider uppercase">SECTOR 7 | DEPLOYMENT ACTIVE</p>
+                <p className="text-neon-violet text-[10px] md:text-xs font-semibold tracking-wider uppercase">SECTOR 7 | DEPLOYMENT ACTIVE</p>
               </motion.div>
 
               {/* Dashboard Header Style based on image reference */}
@@ -271,7 +271,7 @@ export default function Results() {
                   <div className="bg-[#0f0f13]/90 backdrop-blur border border-white/5 rounded-xl p-3 md:p-4 shadow-[0_8px_30px_rgba(0,0,0,0.5)] flex flex-col items-start relative overflow-hidden group">
                     <div className="absolute inset-0 bg-gradient-to-r from-[#53389e]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                     <div className="text-[10px] text-gray-500 font-bold tracking-widest uppercase mb-1 flex items-center gap-2">
-                      <Users className="w-3 h-3 text-[#a855f7]" /> Total Teams
+                      <Users className="w-3 h-3 text-neon-violet" /> Total Teams
                     </div>
                     <div className="text-xl md:text-2xl font-black text-[#e2e8f0] font-mono tracking-widest">{teams.length}</div>
                   </div>
@@ -317,7 +317,7 @@ export default function Results() {
 
                   <div className="mt-4 text-center bg-[#0f0f13]/90 backdrop-blur px-5 py-3 rounded-xl border border-white/5 w-full max-w-[200px] shadow-lg relative overflow-hidden">
                     <div className="absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-[#a855f7] to-transparent opacity-50" />
-                    <div className="text-[9px] text-[#a855f7] font-bold tracking-[0.2em] uppercase mb-1">Process Action</div>
+                    <div className="text-[9px] text-neon-violet font-bold tracking-[0.2em] uppercase mb-1">Process Action</div>
                     <div className="text-lg md:text-xl font-black text-white uppercase tracking-[0.3em] drop-shadow-sm">
                       SLOT-{currentFilledSlots.toString().padStart(2, '0')}
                     </div>
@@ -332,10 +332,10 @@ export default function Results() {
                     <div className="text-lg md:text-xl font-black text-white tracking-widest uppercase text-right">EVALUATION-1</div>
                   </div>
 
-                  <div className="bg-[#0f0f13]/90 backdrop-blur border border-[#53389e]/20 rounded-xl p-3 md:p-4 shadow-[0_8px_30px_rgba(83,56,158,0.05)] flex justify-between items-center relative overflow-hidden">
+                  <div className="bg-[#0f0f13]/90 backdrop-blur border border-neon-violet/20 rounded-xl p-3 md:p-4 shadow-[0_8px_30px_rgba(83,56,158,0.05)] flex justify-between items-center relative overflow-hidden">
                     <div className="absolute right-0 top-0 bottom-0 w-1 bg-[#53389e] shadow-[0_0_15px_#53389e]" />
                     <div className="text-[10px] text-gray-500 font-bold tracking-widest uppercase">Slots Filled</div>
-                    <div className="text-xl md:text-2xl font-black text-[#53389e] font-mono tracking-wider">{currentFilledSlots} / {maxSlots}</div>
+                    <div className="text-xl md:text-2xl font-black text-neon-violet font-mono tracking-wider">{currentFilledSlots} / {maxSlots}</div>
                   </div>
                 </div>
               </motion.div>
@@ -357,7 +357,7 @@ export default function Results() {
                         transition={{ duration: 0.5, layout: { duration: 0.5 } }}
                         className={`relative p-3 rounded-xl backdrop-blur-xl transition-all flex items-center gap-3 group overflow-hidden ${isAnnouncedWinner
                           ? 'bg-[#14121a] border-2 border-[#ffd700] shadow-[0_0_25px_rgba(255,215,0,0.2)]'
-                          : isUserTeam ? 'bg-gradient-to-br from-[#1a1528] to-[#2d1b4e] border border-[#a855f7] shadow-[0_0_20px_rgba(168,85,247,0.15)]'
+                          : isUserTeam ? 'bg-gradient-to-br from-[#1a1528] to-[#2d1b4e] border border-neon-violet shadow-[0_0_20px_rgba(168,85,247,0.15)]'
                             : 'bg-[#0f0f13]/80 border border-white/5 hover:border-white/10'
                           }`}
                       >
@@ -366,14 +366,14 @@ export default function Results() {
                         )}
 
                         {isUserTeam && !isAnnouncedWinner && (
-                          <div className="absolute top-0 right-0 px-3 py-1 bg-[#a855f7] text-white text-[9px] font-black uppercase tracking-widest rounded-bl-lg">
+                          <div className="absolute top-0 right-0 px-3 py-1 bg-[#53389e] text-white text-[9px] font-black uppercase tracking-widest rounded-bl-lg">
                             Your Team
                           </div>
                         )}
 
                         {/* Icon Square */}
-                        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shrink-0 shadow-inner ${isAnnouncedWinner ? 'bg-gradient-to-br from-[#ffd700]/20 to-[#ffd700]/5 border border-[#ffd700]/50' : isUserTeam ? 'bg-gradient-to-br from-[#a855f7]/20 to-[#a855f7]/5 border border-[#a855f7]/30' : 'bg-[#1a1a24] border border-white/5'}`}>
-                          <Users className={`w-5 h-5 md:w-6 md:h-6 ${isAnnouncedWinner ? 'text-[#ffd700] drop-shadow-[0_0_8px_rgba(255,215,0,0.8)]' : isUserTeam ? 'text-[#a855f7]' : 'text-gray-500'}`} />
+                        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shrink-0 shadow-inner ${isAnnouncedWinner ? 'bg-gradient-to-br from-[#ffd700]/20 to-[#ffd700]/5 border border-[#ffd700]/50' : isUserTeam ? 'bg-gradient-to-br from-[#a855f7]/20 to-[#a855f7]/5 border border-neon-violet/30' : 'bg-[#1a1a24] border border-white/5'}`}>
+                          <Users className={`w-5 h-5 md:w-6 md:h-6 ${isAnnouncedWinner ? 'text-[#ffd700] drop-shadow-[0_0_8px_rgba(255,215,0,0.8)]' : isUserTeam ? 'text-neon-violet' : 'text-gray-500'}`} />
                         </div>
 
                         {/* Text Content */}
@@ -416,7 +416,7 @@ export default function Results() {
               disabled={!isUnlocked}
               className={`flex items-center gap-3 px-8 py-4 rounded-xl font-black text-sm md:text-lg tracking-widest transition-all duration-300 uppercase
                  ${isUnlocked
-                  ? (isUserWinner ? 'bg-[#53389e] text-[#ffffff] shadow-[0_0_40px_rgba(83,56,158,0.4)] hover:scale-105 hover:bg-violet-400' : 'bg-[#a855f7] text-white shadow-[0_0_30px_rgba(168,85,247,0.4)] hover:scale-105 hover:bg-[#b06bf6]')
+                  ? (isUserWinner ? 'bg-[#53389e] text-[#ffffff] shadow-[0_0_40px_rgba(83,56,158,0.4)] hover:scale-105 hover:bg-violet-400' : 'bg-[#53389e] text-white shadow-[0_0_30px_rgba(168,85,247,0.4)] hover:scale-105 hover:bg-[#b06bf6]')
                   : 'bg-[#0f0f13] text-gray-500 border border-white/10 cursor-not-allowed opacity-80 backdrop-blur-md'}`}
             >
               {isUnlocked ? (

@@ -12,6 +12,7 @@ import {
 const navItems = [
     { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
     { href: '/dashboard/users', label: 'Admin Management', icon: UserPlus },
+    { href: '/dashboard/participants', label: 'Participants', icon: UserPlus },
     { href: '/dashboard/results', label: 'Evaluation', icon: Trophy },
     { href: '/dashboard/timers', label: 'Settings', icon: Settings },
 ];

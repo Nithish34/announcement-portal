@@ -18,6 +18,11 @@ import { apiLimiter } from './middleware/rateLimiter';
 
 dotenv.config();
 
+if (!process.env.JWT_SECRET) {
+    console.error('FATAL ERROR: JWT_SECRET environment variable is not set.');
+    process.exit(1);
+}
+
 const app = express();
 const server = http.createServer(app);
 

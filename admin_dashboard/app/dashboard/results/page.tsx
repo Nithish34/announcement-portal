@@ -4,12 +4,14 @@ import { useState, useEffect, useCallback } from 'react';
 import {
     apiGetAllTeams, apiGetAllConfig,
     apiEvaluatePhase1, apiEvaluatePhase2,
+    apiCreateTeam, apiTriggerGhostProtocol,
     TeamRow,
 } from '@/lib/api';
 import {
     Trophy, Users, User, CheckCircle, AlertCircle,
-    Loader2, Play, RefreshCw, TriangleAlert
+    Loader2, Play, RefreshCw, TriangleAlert, Zap
 } from 'lucide-react';
+import HoldButton from '@/app/components/HoldButton';
 
 type Toast = { msg: string; type: 'ok' | 'err' };
 type Tab = 'eval1' | 'eval2';
@@ -108,17 +110,6 @@ export default function EvaluationPage() {
         } catch { /* ignore */ }
     }, []);
 
-    // Load all teams for Eval 1
-    const loadTeams = useCallback(async () => {
-        try {
-            const data = await apiGetAllTeams();
-            setTeams(data);
-            // Pre-select teams already marked as passed
-            const alreadyPassed = new Set(data.filter(t => t.phase1Pass).map(t => t.id));
-            setSelectedTeams(alreadyPassed);
-        } catch { notify('Failed to load teams', 'err'); }
-    }, []);
-
     // Load passed teams WITH members for Eval 2
     const loadPassedTeamsWithMembers = useCallback(async (allTeams: TeamRow[]) => {
         const passed = allTeams.filter(t => t.phase1Pass);
@@ -196,7 +187,11 @@ export default function EvaluationPage() {
     const toggleExpand = (id: string) => {
         setExpandedTeams(prev => {
             const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
+            if (next.has(id)) {
+                next.delete(id);
+            } else {
+                next.add(id);
+            }
             return next;
         });
     };
@@ -214,6 +209,44 @@ export default function EvaluationPage() {
             notify(`✓ Eval 2 published — ${selectedUsers.size} individuals selected`);
             load();
         } catch (e: unknown) { notify((e as Error).message ?? 'Failed to publish', 'err'); }
+        setPublishing(false);
+    };
+
+    const triggerGhostProtocol = async () => {
+        if (selectedUsers.size === 0) { notify('Select at least one participant first', 'err'); return; }
+        setPublishing(true);
+        try {
+            // 1. Array of selected user IDs
+            const usersToShuffle = Array.from(selectedUsers);
+            const shuffled = [...usersToShuffle].sort(() => Math.random() - 0.5);
+
+            // 2. Determine number of teams (target 4 members per team)
+            const teamSize = 4;
+            const numTeams = Math.ceil(shuffled.length / teamSize) || 1;
+
+            // 3. Create teams
+            const newTeamIds: string[] = [];
+            for (let i = 0; i < numTeams; i++) {
+                // e.g. Ghost Squad A, B, C...
+                const teamName = `Ghost Squad ${String.fromCharCode(65 + i)}`; 
+                const created = await apiCreateTeam(teamName);
+                newTeamIds.push(created.id);
+            }
+
+            // 4. Assign users to new teams
+            const assignments: { userId: string; newTeamId: string }[] = [];
+            shuffled.forEach((userId, idx) => {
+                const teamIndex = idx % numTeams;
+                assignments.push({ userId, newTeamId: newTeamIds[teamIndex] });
+            });
+
+            // 5. Trigger the protocol
+            await apiTriggerGhostProtocol(assignments);
+            notify(`✓ Ghost Protocol triggered for ${shuffled.length} users across ${numTeams} new teams!`);
+            load();
+        } catch (e: unknown) {
+            notify((e as Error).message ?? 'Failed to trigger Ghost Protocol', 'err');
+        }
         setPublishing(false);
     };
 
@@ -350,15 +383,16 @@ export default function EvaluationPage() {
                     )}
 
                     {/* Publish button */}
-                    <div className="flex justify-end">
-                        <button
-                            onClick={publishEval1}
+                    <div className="flex justify-end max-w-sm ml-auto">
+                        <HoldButton
+                            onTrigger={publishEval1}
                             disabled={publishing || selectedTeams.size === 0}
-                            className="btn btn-primary"
-                        >
-                            {publishing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-                            {publishing ? 'Publishing…' : `Publish Eval 1 — ${selectedTeams.size} Teams`}
-                        </button>
+                            holdTimeMs={2000}
+                            idleText={`PUBLISH EVAL 1 (${selectedTeams.size} TEAMS)`}
+                            holdingText="PUBLISHING..."
+                            successText="PUBLISHED!"
+                            icon={<Play className="w-4 h-4" />}
+                        />
                     </div>
                 </div>
             ) : (
@@ -499,16 +533,30 @@ export default function EvaluationPage() {
                         </>
                     )}
 
-                    {/* Publish button */}
-                    <div className="flex justify-end">
-                        <button
-                            onClick={publishEval2}
-                            disabled={publishing || selectedUsers.size === 0 || passedTeams.length === 0}
-                            className="btn btn-primary"
-                        >
-                            {publishing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-                            {publishing ? 'Publishing…' : `Publish Eval 2 — ${selectedUsers.size} Individuals`}
-                        </button>
+                    {/* Action buttons */}
+                    <div className="flex flex-col sm:flex-row items-center justify-end gap-4 mt-6">
+                        <div className="w-full sm:w-auto min-w-[250px]">
+                            <HoldButton
+                                onTrigger={publishEval2}
+                                disabled={publishing || selectedUsers.size === 0 || passedTeams.length === 0}
+                                holdTimeMs={2000}
+                                idleText={`PUBLISH EVAL 2 (${selectedUsers.size} USERS)`}
+                                holdingText="PUBLISHING..."
+                                successText="PUBLISHED!"
+                                icon={<Play className="w-4 h-4" />}
+                            />
+                        </div>
+                        <div className="w-full sm:w-auto min-w-[300px]">
+                            <HoldButton
+                                onTrigger={triggerGhostProtocol}
+                                disabled={publishing || selectedUsers.size === 0 || passedTeams.length === 0}
+                                holdTimeMs={3000}
+                                idleText="FORM TEAMS & TRIGGER GHOST"
+                                holdingText="INITIATING GHOST PROTOCOL..."
+                                successText="GHOST PROTOCOL TRIGGERED!"
+                                icon={<Zap className="w-4 h-4" />}
+                            />
+                        </div>
                     </div>
                 </div>
             )}

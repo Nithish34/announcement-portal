@@ -230,11 +230,11 @@ export default function Results2() {
                                 transition={{ delay: 0.1 }}
                                 className="text-center mb-6"
                             >
-                                <Trophy className="w-12 h-12 md:w-16 md:h-16 text-[#53389e] mx-auto mb-3 drop-shadow-[0_0_15px_rgba(83,56,158,0.8)]" />
+                                <Trophy className="w-12 h-12 md:w-16 md:h-16 text-neon-violet mx-auto mb-3 drop-shadow-[0_0_15px_rgba(83,56,158,0.8)]" />
                                 <h1 className="text-2xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-[#53389e] mb-1 drop-shadow-lg tracking-widest uppercase">
                                     PHASE 2 SUMMARY
                                 </h1>
-                                <p className="text-[#a855f7] text-[10px] md:text-xs font-semibold tracking-wider uppercase">Individual Participant Rankings</p>
+                                <p className="text-neon-violet text-[10px] md:text-xs font-semibold tracking-wider uppercase">Individual Participant Rankings</p>
                             </motion.div>
 
                             <motion.div
@@ -278,10 +278,10 @@ export default function Results2() {
 
                                 {/* Right Stats Block */}
                                 <div className="flex flex-col gap-3 w-full lg:w-1/3">
-                                    <div className="bg-[#0f0f13]/90 backdrop-blur border border-[#53389e]/20 rounded-xl p-3 md:p-4 shadow-[0_8px_30px_rgba(83,56,158,0.05)] flex justify-between items-center relative overflow-hidden">
+                                    <div className="bg-[#0f0f13]/90 backdrop-blur border border-neon-violet/20 rounded-xl p-3 md:p-4 shadow-[0_8px_30px_rgba(83,56,158,0.05)] flex justify-between items-center relative overflow-hidden">
                                         <div className="absolute right-0 top-0 bottom-0 w-1 bg-[#53389e] shadow-[0_0_15px_#53389e]" />
                                         <div className="text-[10px] text-gray-500 font-bold tracking-widest uppercase">Selections Made</div>
-                                        <div className="text-xl md:text-2xl font-black text-[#53389e] font-mono tracking-wider">{slottedCount}</div>
+                                        <div className="text-xl md:text-2xl font-black text-neon-violet font-mono tracking-wider">{slottedCount}</div>
                                     </div>
                                 </div>
                             </motion.div>
@@ -300,8 +300,8 @@ export default function Results2() {
                                                 exit={{ opacity: 0, scale: 0.8, y: -50 }}
                                                 transition={{ duration: 0.5, layout: { duration: 0.5 } }}
                                                 className={`relative p-4 rounded-xl backdrop-blur-xl transition-all overflow-hidden ${isUserCard
-                                                    ? 'bg-gradient-to-br from-[#53389e]/10 to-[#3e1c84]/20 border-2 border-[#53389e] shadow-[0_0_30px_rgba(83,56,158,0.2)]'
-                                                    : 'bg-[#000000]/60 border border-white/10'
+                                                    ? 'bg-gradient-to-br from-[#53389e]/10 to-[#3e1c84]/20 border-2 border-neon-violet shadow-[0_0_30px_rgba(83,56,158,0.2)]'
+                                                    : 'bg-black-true/60 border border-white/10'
                                                     }`}
                                             >
                                                 {isUserCard && <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#53389e] to-transparent opacity-80" />}
@@ -317,21 +317,21 @@ export default function Results2() {
                                                         <h3 className={`text-base font-black tracking-wide truncate ${isUserCard ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#53389e] to-white drop-shadow-sm' : 'text-white'}`}>
                                                             {person.email}
                                                         </h3>
-                                                        <div className="flex flex-col gap-1 mt-1 border-l-2 border-[#53389e] pl-2">
+                                                        <div className="flex flex-col gap-1 mt-1 border-l-2 border-neon-violet pl-2">
                                                             <p className="text-gray-400 text-[10px] font-mono tracking-widest">{person.id}</p>
-                                                            <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-[#53389e]/30 text-white border border-[#53389e]/80 inline-block w-fit">
+                                                            <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-[#53389e]/30 text-white border border-neon-violet/80 inline-block w-fit">
                                                                 {person.role}
                                                             </span>
                                                         </div>
                                                     </div>
-                                                    <div className={`p-2 rounded-lg border shrink-0 ${isUserCard ? 'bg-[#53389e]/10 border-[#53389e]/50' : 'bg-white/5 border-white/10'}`}>
-                                                        <User className={`w-4 h-4 ${isUserCard ? 'text-[#53389e]' : 'text-gray-400'}`} />
+                                                    <div className={`p-2 rounded-lg border shrink-0 ${isUserCard ? 'bg-[#53389e]/10 border-neon-violet/50' : 'bg-white/5 border-white/10'}`}>
+                                                        <User className={`w-4 h-4 ${isUserCard ? 'text-neon-violet' : 'text-gray-400'}`} />
                                                     </div>
                                                 </div>
 
                                                 <div className="flex flex-col gap-1 items-start bg-black/40 rounded-lg p-2 mt-2 border border-white/5">
                                                     <span className="text-gray-400 text-[10px] font-semibold tracking-wider">RESULT STATUS:</span>
-                                                    <span className={`font-mono font-black text-lg ${isUserCard ? 'text-[#53389e] drop-shadow-[0_0_5px_rgba(83,56,158,0.5)]' : person.result === 'WINNER' ? 'text-[#ffd700]' : 'text-white'}`}>
+                                                    <span className={`font-mono font-black text-lg ${isUserCard ? 'text-neon-violet drop-shadow-[0_0_5px_rgba(83,56,158,0.5)]' : person.result === 'WINNER' ? 'text-[#ffd700]' : 'text-white'}`}>
                                                         {person.result ?? 'PENDING'}
                                                     </span>
                                                 </div>
@@ -351,7 +351,7 @@ export default function Results2() {
                                     <motion.div
                                         animate={{ opacity: [0.4, 1, 0.4] }}
                                         transition={{ duration: 1.5, repeat: Infinity }}
-                                        className="text-[#53389e] text-sm md:text-base font-bold tracking-[0.3em] uppercase drop-shadow-[0_0_5px_rgba(83,56,158,0.5)] mb-6"
+                                        className="text-neon-violet text-sm md:text-base font-bold tracking-[0.3em] uppercase drop-shadow-[0_0_5px_rgba(83,56,158,0.5)] mb-6"
                                     >
                                         Evaluating Individual Performances...
                                     </motion.div>
@@ -374,7 +374,7 @@ export default function Results2() {
                         disabled={!isUnlocked}
                         className={`flex items-center gap-3 px-8 py-4 rounded-xl font-black text-xl tracking-widest transition-all duration-300 uppercase
                      ${isUnlocked
-                                ? (isUserTopPerformer ? 'bg-[#53389e] text-[#ffffff] shadow-[0_0_40px_rgba(83,56,158,0.6)] hover:scale-105 hover:bg-violet-400' : 'bg-[#a855f7] text-white shadow-[0_0_30px_rgba(168,85,247,0.6)] hover:scale-105 hover:bg-[#b06bf6]')
+                                ? (isUserTopPerformer ? 'bg-[#53389e] text-[#ffffff] shadow-[0_0_40px_rgba(83,56,158,0.6)] hover:scale-105 hover:bg-violet-400' : 'bg-[#53389e] text-white shadow-[0_0_30px_rgba(168,85,247,0.6)] hover:scale-105 hover:bg-[#b06bf6]')
                                 : 'bg-gray-800 text-gray-400 border border-gray-700 cursor-not-allowed opacity-80'}`}
                     >
                         {isUnlocked ? (

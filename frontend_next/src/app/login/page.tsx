@@ -39,7 +39,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center">
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center bg-black-true">
       <DynamicBackground />
       <MovingBanner direction="left" className="absolute top-0 left-0 right-0 z-50 opacity-80" />
       <MovingBanner direction="right" className="absolute bottom-0 left-0 right-0 z-50 opacity-80" />
@@ -50,14 +50,14 @@ export default function Login() {
         transition={{ duration: 0.8 }}
         className="relative z-10 w-full max-w-md px-6"
       >
-        <div className="bg-[#000000]/60 backdrop-blur-xl border border-[#53389e]/30 rounded-2xl p-8 shadow-[0_0_40px_rgba(83,56,158,0.1)]">
+        <div className="bg-black/60 backdrop-blur-xl border border-neon-violet rounded-2xl p-8 shadow-neon-violet">
           <motion.div
             initial={{ scale: 0.9 }}
             animate={{ scale: 1 }}
             transition={{ duration: 0.5, delay: 0.2 }}
             className="flex flex-col items-center justify-center mb-8 mt-2"
           >
-            <h1 className="text-4xl font-black text-[#53389e] text-center mb-2 tracking-widest uppercase drop-shadow-[0_0_10px_rgba(83,56,158,0.5)]">
+            <h1 className="text-4xl font-black text-neon-violet text-center mb-2 tracking-widest uppercase">
               HACKATHON
             </h1>
             <p className="text-gray-300 text-center text-sm tracking-wider uppercase">Access Portal</p>
@@ -75,7 +75,7 @@ export default function Login() {
                   value={teamId}
                   onChange={(e) => setTeamId(e.target.value)}
                   disabled={isLoading}
-                  className="w-full bg-[#000000]/70 border border-[#53389e]/30 rounded-xl px-10 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#53389e] focus:ring-1 focus:ring-[#53389e] transition-all shadow-inner disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-black/70 border border-neon-violet rounded-xl px-10 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-neon-violet transition-all shadow-inner disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="Enter Team ID"
                   required
                 />
@@ -93,7 +93,7 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isLoading}
-                  className="w-full bg-[#000000]/70 border border-[#53389e]/30 rounded-xl px-10 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#53389e] focus:ring-1 focus:ring-[#53389e] transition-all shadow-inner disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-black/70 border border-neon-violet rounded-xl px-10 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-neon-violet transition-all shadow-inner disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="Enter Password"
                   required
                 />
@@ -113,11 +113,11 @@ export default function Login() {
             )}
 
             <motion.button
-              whileHover={isLoading ? {} : { scale: 1.02 }}
+              whileHover={isLoading ? {} : { scale: 1.02, textShadow: "0 0 8px rgb(255,255,255)" }}
               whileTap={isLoading ? {} : { scale: 0.98 }}
               type="submit"
               disabled={isLoading}
-              className="w-full mt-8 bg-gradient-to-r from-[#53389e] to-[#6b47c9] text-white font-black tracking-widest py-4 rounded-xl hover:from-[#6b47c9] hover:to-[#53389e] transition-all duration-300 shadow-[0_0_20px_rgba(83,56,158,0.4)] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+              className="w-full mt-8 bg-black border-2 border-neon-violet text-neon-violet font-black tracking-widest py-4 rounded-xl hover:bg-[#53389e] hover:text-white transition-all duration-300 shadow-neon-violet disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-3"
             >
               {isLoading ? (
                 <>

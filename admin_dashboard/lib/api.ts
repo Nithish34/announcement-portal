@@ -76,7 +76,7 @@ export const apiGetAllTeams = () => apiFetch<TeamRow[]>('/teams');
 export const apiGetTeamById = (id: string) => apiFetch<TeamRow>(`/teams/${id}`);
 
 export const apiCreateTeam = (name: string, repoUrl?: string) =>
-    apiFetch('/teams', {
+    apiFetch<TeamRow>('/teams', {
         method: 'POST',
         body: JSON.stringify({ name, repoUrl }),
     });
@@ -97,6 +97,32 @@ export const apiEvaluatePhase2 = (
     apiFetch('/results/phase2/evaluate', {
         method: 'POST',
         body: JSON.stringify({ results }),
+    });
+
+export const apiTriggerGhostProtocol = (
+    assignments: { userId: string; newTeamId: string }[]
+) =>
+    apiFetch('/admin/ghost-protocol', {
+        method: 'POST',
+        body: JSON.stringify({ assignments }),
+    });
+
+// ── Users ───────────────────────────────────────────────────────────────────
+export interface UserRow {
+    id: string;
+    email: string;
+    role: string;
+    result: string | null;
+    teamId: string;
+    createdAt: string;
+}
+
+export const apiGetAllUsers = () => apiFetch<UserRow[]>('/users');
+
+export const apiUpdateUser = (id: string, data: { email?: string; teamId?: string }) =>
+    apiFetch(`/users/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
     });
 
 // ── Admin dashboard stats ─────────────────────────────────────────────────────

@@ -75,7 +75,7 @@ export async function setEvaluationResult(req: Request, res: Response): Promise<
 
 // POST /api/admin/ghost-protocol
 export async function triggerGhostProtocol(req: Request, res: Response): Promise<void> {
-    const { assignments } = req.body as {
+    const { assignments } = (req.body || {}) as {
         assignments?: { userId: string; newTeamId: string }[];
     };
 

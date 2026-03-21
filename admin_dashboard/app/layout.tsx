@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/lib/auth-context';
+import AdminSocketNotifier from './components/AdminSocketNotifier';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -14,7 +15,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className="dark">
       <body className={`${inter.variable} font-inter antialiased bg-[#050508] text-white`} suppressHydrationWarning>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <AdminSocketNotifier />
+          {children}
+        </AuthProvider>
 
       </body>
     </html>

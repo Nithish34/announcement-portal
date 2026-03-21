@@ -1,18 +1,11 @@
-// Prisma Schema for Ghost Protocol Backend
-// Prisma v7+: connection URL is in prisma.config.ts — NOT in the datasource block.
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-  // No `url` here in Prisma v7 — see prisma.config.ts
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// User — participant only (admins live in the Admin table)
-// ─────────────────────────────────────────────────────────────────────────────
 model User {
   id        String   @id @default(cuid())
   teamId    String
@@ -21,50 +14,36 @@ model User {
   role      Role     @default(PARTICIPANT)
   result    Result?
   createdAt DateTime @default(now())
-
   team      Team     @relation(fields: [teamId], references: [id])
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Admin — completely separate from participant Users.
-// Only admins can add or remove other admins.
-// ─────────────────────────────────────────────────────────────────────────────
 model Admin {
   id          String   @id @default(cuid())
   email       String   @unique
   password    String
   name        String   @default("")
   createdAt   DateTime @default(now())
-  createdById String?  // id of Admin who created this one (null = seed/bootstrap admin)
+  createdById String?
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Team — hackathon team
-// ─────────────────────────────────────────────────────────────────────────────
 model Team {
   id             String   @id @default(cuid())
   name           String   @unique
-  members        User[]
   repoUrl        String?
   phase1Pass     Boolean  @default(false)
   phase2Pass     Boolean  @default(false)
+  createdAt      DateTime @default(now())
   resultOverride Result?
   isAdminTeam    Boolean  @default(false)
-  createdAt      DateTime @default(now())
+  members        User[]
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SystemConfig — key/value store for runtime flags & workflow state
-// ─────────────────────────────────────────────────────────────────────────────
 model SystemConfig {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Enums
-// ─────────────────────────────────────────────────────────────────────────────
 enum Role {
   PARTICIPANT
   ADMIN

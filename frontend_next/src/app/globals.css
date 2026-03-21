@@ -1,28 +1,48 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #000000;
+  --foreground: #ffffff;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-neon-violet: #53389e;
+  --color-neon-gold: #ffd700;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Neon Violet Theme Classes */
+.bg-black-true { background-color: #000000; }
+.text-white-true { color: #ffffff; }
+
+.text-neon-violet {
+  color: #53389e;
+  text-shadow: 0 0 5px #53389e, 0 0 10px #53389e, 0 0 20px #53389e;
+}
+
+.shadow-neon-violet {
+  box-shadow: 0 0 10px #53389e, 0 0 20px #53389e, 0 0 30px #53389e inset;
+  border: 1px solid #53389e;
+}
+
+.border-neon-violet {
+  border-color: #53389e;
+}
+
+/* Gold Theme (Only for result borders) */
+.border-gold-glow {
+  border: 2px solid #ffd700;
+  box-shadow: 0 0 10px #ffd700, 0 0 15px #ffd700 inset;
 }
 
 @tailwind base;

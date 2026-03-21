@@ -24,6 +24,7 @@ declare global {
 }
 
 // ── requireAuth — for participant routes ────────────────────────────────────
+// Also allows admin tokens to pass through since the Admin Dashboard uses participant routes
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
     const authHeader = req.headers.authorization;
 
@@ -35,8 +36,16 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     const token = authHeader.split(' ')[1];
 
     try {
-        const payload = jwt.verify(token, process.env.JWT_SECRET!) as AuthPayload;
-        req.user = payload;
+        const payload = jwt.verify(token, process.env.JWT_SECRET!) as any;
+        
+        if (payload.isAdmin) {
+            req.admin = payload as AdminAuthPayload;
+            // Provide a fallback user object for routes that need it but don't strictly require participant IDs
+            req.user = { userId: '', teamId: '', role: 'ADMIN' };
+        } else {
+            req.user = payload as AuthPayload;
+        }
+        
         next();
     } catch {
         res.status(401).json({ error: 'Invalid or expired token' });
@@ -46,8 +55,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
 // ── requireAdmin — for participant routes that need ADMIN role ──────────────
 export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
     requireAuth(req, res, () => {
-        const payload = req.user as any;
-        if (payload?.role !== 'ADMIN' && payload?.isAdmin !== true) {
+        if (req.user?.role !== 'ADMIN' && req.admin?.isAdmin !== true) {
             res.status(403).json({ error: 'Admin access required' });
             return;
         }
@@ -69,7 +77,7 @@ export function requireAdminAuth(req: Request, res: Response, next: NextFunction
     try {
         const payload = jwt.verify(token, process.env.JWT_SECRET!) as AdminAuthPayload;
         if (!payload.isAdmin) {
-            res.status(403).json({ error: 'Admin access required' });
+            res.status(403).json({ error: 'Admin dashboard access required' });
             return;
         }
         req.admin = payload;

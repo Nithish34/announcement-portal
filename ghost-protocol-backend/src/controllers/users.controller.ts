@@ -72,13 +72,17 @@ export async function updateUserProfile(req: Request, res: Response): Promise<vo
         return;
     }
 
-    const { email } = req.body as { email?: string };
+    const { email, teamId } = req.body as { email?: string; teamId?: string };
 
     try {
+        const dataToUpdate: any = {};
+        if (email !== undefined) dataToUpdate.email = email;
+        if (teamId !== undefined && req.user!.role === 'ADMIN') dataToUpdate.teamId = teamId;
+
         const user = await prisma.user.update({
             where: { id: String(req.params.id) },
-            data: { email },
-            select: { id: true, email: true, role: true, result: true },
+            data: dataToUpdate,
+            select: { id: true, email: true, role: true, result: true, teamId: true },
         });
         res.json(user);
     } catch (err: any) {

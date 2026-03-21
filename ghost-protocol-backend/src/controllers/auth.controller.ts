@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt, { SignOptions } from 'jsonwebtoken';
+import crypto from 'crypto';
 import { prisma } from '../services/prisma.service';
 
 function signToken(payload: object): string {
@@ -17,6 +18,16 @@ export async function login(req: Request, res: Response): Promise<void> {
 
     if ((!teamId && !email) || !password) {
         res.status(400).json({ error: 'teamId (or email) and password are required' });
+        return;
+    }
+
+    if (teamId && typeof teamId !== 'string') {
+        res.status(400).json({ error: 'teamId must be a string' });
+        return;
+    }
+
+    if (email && typeof email !== 'string') {
+        res.status(400).json({ error: 'email must be a string' });
         return;
     }
 
@@ -72,13 +83,32 @@ export async function registerTeam(req: Request, res: Response): Promise<void> {
         adminSecret?: string;
     };
 
-    if (adminSecret !== process.env.ADMIN_SECRET) {
+    if (!adminSecret || typeof adminSecret !== 'string') {
+        res.status(403).json({ error: 'Invalid admin secret' });
+        return;
+    }
+
+    const envSecret = process.env.ADMIN_SECRET || '';
+    if (!envSecret) {
+        res.status(500).json({ error: 'ADMIN_SECRET is not configured on the server' });
+        return;
+    }
+
+    const secretBuf = Buffer.from(adminSecret);
+    const envSecretBuf = Buffer.from(envSecret);
+
+    if (secretBuf.length !== envSecretBuf.length || !crypto.timingSafeEqual(secretBuf, envSecretBuf)) {
         res.status(403).json({ error: 'Invalid admin secret' });
         return;
     }
 
     if (!email || !password || !teamId) {
         res.status(400).json({ error: 'email, password, and teamId are required' });
+        return;
+    }
+
+    if (typeof email !== 'string' || typeof password !== 'string' || typeof teamId !== 'string') {
+        res.status(400).json({ error: 'Invalid input types' });
         return;
     }
 
